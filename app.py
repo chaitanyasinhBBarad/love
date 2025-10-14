@@ -11,8 +11,8 @@ st.markdown("""
 <style>
 /* --- Main Background (Original pink gradient) --- */
 html, body, [data-testid="stAppViewContainer"] > .main {
-    /* Reverting to the original pink gradient */
-    background: linear-gradient(135deg, #000000, #fff0f5);
+    /* FIXED: Background set back to the pink gradient */
+    background: linear-gradient(135deg, #ffd6e0, #fff0f5);
     position: relative; 
     z-index: 0; 
     min-height: 100vh;
