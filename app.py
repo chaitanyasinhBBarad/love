@@ -137,7 +137,7 @@ st.markdown('<h1 class="title-text">💖 For Drishya — Love App 💖</h1>', un
 st.markdown('<div class="subtitle-text">A little corner of the internet made just for you 💐</div>', unsafe_allow_html=True)
 
 # Love tree visual
-st.markdown('<div class="love-tree"><div class="tree">🌳❤️🌳</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="love-tree"><div class="tree">🌼❤️🌼</div></div>', unsafe_allow_html=True)
 
 # Messages
 messages = [
