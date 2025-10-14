@@ -4,14 +4,13 @@ from datetime import datetime
 import streamlit.components.v1 as components
 
 # Set page icon to a daisy
-st.set_page_config(page_title="Love App 💖", page_icon="🌼", layout="centered")
+st.set_page_config(page_title="Flower Love App 🌼", page_icon="🌼", layout="centered")
 
 # --- CSS for background, falling daisies, and general styling ---
 st.markdown("""
 <style>
-/* --- Main Background (Reverted to original gradient, no image) --- */
+/* --- Main Background (Original pink gradient) --- */
 html, body, [data-testid="stAppViewContainer"] > .main {
-    /* Reverting to the original pink gradient */
     background: linear-gradient(135deg, #ffd6e0, #fff0f5);
     position: relative; 
     z-index: 0; 
@@ -21,17 +20,17 @@ html, body, [data-testid="stAppViewContainer"] > .main {
 /* --- Content Wrapper for Readability --- */
 .content-wrapper {
     position: relative;
-    z-index: 10; /* Higher than falling daisies */
+    z-index: 10; 
     padding: 20px; 
-    /* Using a soft pink background for the content box */
-    background: rgba(255, 240, 245, 0.85); 
+    /* Using a soft white/pink background for the content box */
+    background: rgba(255, 255, 255, 0.85); 
     border-radius: 15px;
     margin: 20px auto;
     max-width: 800px; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-/* --- Falling Daisy Animation --- */
+/* --- Falling Daisy Animation (More prominent) --- */
 .daisy-container {
     position: fixed;
     top: 0;
@@ -41,32 +40,38 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     pointer-events: none;
     overflow: hidden;
     z-index: 5; /* Below main content, above background */
+    opacity: 0.7; /* Slightly more visible */
 }
 .daisy {
     position: absolute;
-    color: #FFD700; 
+    color: #FFF; /* Pure white center */
     font-size: 20px;
     opacity: 0; 
     animation: daisyFall 20s linear infinite; 
+    /* Using text-shadow to give the emoji a subtle glow/border */
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
 }
 @keyframes daisyFall {
     0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
-    10% { opacity: 0.8; }
+    10% { opacity: 0.9; }
     100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
-/* Staggering daisy animation delays */
-.daisy:nth-child(1) { animation-delay: 0s; left: 10%; font-size: 25px;}
-.daisy:nth-child(2) { animation-delay: 2s; left: 20%; font-size: 20px;}
-.daisy:nth-child(3) { animation-delay: 4s; left: 30%; font-size: 30px;}
-.daisy:nth-child(4) { animation-delay: 6s; left: 40%; font-size: 22px;}
-.daisy:nth-child(5) { animation-delay: 8s; left: 50%; font-size: 28px;}
-.daisy:nth-child(6) { animation-delay: 10s; left: 60%; font-size: 23px;}
-.daisy:nth-child(7) { animation-delay: 12s; left: 70%; font-size: 27px;}
-.daisy:nth-child(8) { animation-delay: 14s; left: 80%; font-size: 21px;}
-.daisy:nth-child(9) { animation-delay: 16s; left: 90%; font-size: 26px;}
-.daisy:nth-child(10) { animation-delay: 18s; left: 5%; font-size: 24px;}
-.daisy:nth-child(11) { animation-delay: 20s; left: 15%; font-size: 29px;}
-
+/* Staggering daisy animation delays (Increased number of daisies) */
+.daisy:nth-child(1) { animation-delay: 0s; left: 5%; font-size: 25px;}
+.daisy:nth-child(2) { animation-delay: 1.5s; left: 15%; font-size: 20px;}
+.daisy:nth-child(3) { animation-delay: 3s; left: 25%; font-size: 30px;}
+.daisy:nth-child(4) { animation-delay: 4.5s; left: 35%; font-size: 22px;}
+.daisy:nth-child(5) { animation-delay: 6s; left: 45%; font-size: 28px;}
+.daisy:nth-child(6) { animation-delay: 7.5s; left: 55%; font-size: 23px;}
+.daisy:nth-child(7) { animation-delay: 9s; left: 65%; font-size: 27px;}
+.daisy:nth-child(8) { animation-delay: 10.5s; left: 75%; font-size: 21px;}
+.daisy:nth-child(9) { animation-delay: 12s; left: 85%; font-size: 26px;}
+.daisy:nth-child(10) { animation-delay: 13.5s; left: 95%; font-size: 24px;}
+.daisy:nth-child(11) { animation-delay: 15s; left: 2%; font-size: 18px;}
+.daisy:nth-child(12) { animation-delay: 16.5s; left: 12%; font-size: 32px;}
+.daisy:nth-child(13) { animation-delay: 18s; left: 22%; font-size: 26px;}
+.daisy:nth-child(14) { animation-delay: 19.5s; left: 32%; font-size: 20px;}
+.daisy:nth-child(15) { animation-delay: 21s; left: 42%; font-size: 25px;}
 
 /* --- Other Styling --- */
 .title-text {
@@ -80,6 +85,7 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     margin-top: -10px;
     margin-bottom: 20px;
 }
+/* Floral tree visual */
 .love-tree { text-align: center; margin-top: 10px; margin-bottom: 10px; z-index: 1; }
 .tree { font-size: 72px; animation: sway 3s ease-in-out infinite; }
 @keyframes sway {
@@ -96,7 +102,6 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     font-size: 18px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
-
 
 /* --- Fixed Position Container for Download Button --- */
 .fixed-download-container {
@@ -119,12 +124,12 @@ html, body, [data-testid="stAppViewContainer"] > .main {
 """, unsafe_allow_html=True)
 
 # --- Falling Daisies Animation (HTML) ---
+# Increased the number of daisies
 daisy_html = """
 <div class="daisy-container">
-    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
-    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
-    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
-    <div class="daisy">🌼</div><div class="daisy">🌼</div>
+    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
+    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
+    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
 </div>
 """
 st.markdown(daisy_html, unsafe_allow_html=True)
@@ -133,20 +138,21 @@ st.markdown(daisy_html, unsafe_allow_html=True)
 # --- Main App Content wrapped in the content-wrapper div ---
 st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
 
-st.markdown('<h1 class="title-text">💖 For Drishya — Love App 💖</h1>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle-text">A little corner of the internet made just for you 💐</div>', unsafe_allow_html=True)
+# Updated Title with Daisies
+st.markdown('<h1 class="title-text">🌼 For Drishya — Flower Love App 🌼</h1>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle-text">A little garden of love just for you 💐</div>', unsafe_allow_html=True)
 
-# Love tree visual
-st.markdown('<div class="love-tree"><div class="tree">🌼❤️🌼</div></div>', unsafe_allow_html=True)
+# Floral Tree visual (Changed emojis)
+st.markdown('<div class="love-tree"><div class="tree">🌸🌳🌼</div></div>', unsafe_allow_html=True)
 
-# Messages
+# Messages (Using flower emojis)
 messages = [
-    "You are my favorite notification ❤️",
-    "Every moment with you feels like magic ✨",
-    "You make my heart smile 😊",
-    "I love you more every single day 💕",
-    "You’re my today and all of my tomorrows 💞",
-    "With you, ordinary moments become unforgettable 💫",
+    "You are my favorite daisy in the field 🌼",
+    "Every moment with you feels like a spring morning 🌷",
+    "You make my heart bloom 😊",
+    "I love you more every single day 🌸",
+    "You’re my sunshine and my perfect bouquet 💐",
+    "With you, ordinary moments become beautiful blossoms 💫",
 ]
 
 if "custom_msgs" not in st.session_state:
@@ -158,32 +164,33 @@ if "love_clicks" not in st.session_state:
 st.subheader("💌 Random Love Message")
 col1, col2 = st.columns([1,1])
 with col1:
-    if st.button("💞 Show me some love 💞"):
+    # Button label changed to floral theme
+    if st.button("🌷 Send a sweet message 🌷"):
         st.session_state.love_clicks += 1
         msg_list = messages + st.session_state.custom_msgs
         chosen = random.choice(msg_list)
         st.success(chosen)
 
 with col2:
-    # interactive quick react button (a smaller heart button)
-    if st.button("💓 Send a heart"):
+    # Button label changed to floral theme
+    if st.button("🌼 Send a daisy"):
         st.session_state.love_clicks += 1
-        st.info("Heart sent!")
+        st.info("Daisy sent! 🌼")
 
 st.subheader("💬 Add Your Own Love Note")
 new_msg = st.text_input("Write something sweet...")
-if st.button("💌 Add Message") and new_msg:
+if st.button("🌸 Add Message") and new_msg: # Button label changed
     st.session_state.custom_msgs.append(new_msg)
-    st.success("Added! Now it’s part of our love collection 💞")
+    st.success("Added! Now it’s a beautiful petal in our collection 🌸")
 
 # Close the content-wrapper div
 st.markdown('</div>', unsafe_allow_html=True)
 
 
-# --- ADMIN FEATURE: Download All Custom Messages (positioned outside content-wrapper) ---
+# --- ADMIN FEATURE: Download All Custom Messages (Fixed position) ---
 
 # Prepare the data for download
-download_data = "--- Love Note Collection ---\n"
+download_data = "--- Flower Love Note Collection ---\n"
 if st.session_state.custom_msgs:
     for i, msg in enumerate(st.session_state.custom_msgs):
         download_data += f"\nNote {i+1}:\n"
@@ -194,7 +201,7 @@ else:
 # Use st.markdown to open the fixed container
 st.markdown('<div class="fixed-download-container">', unsafe_allow_html=True)
 
-# FIX: Removed the unnecessary and conflicting 'with st.container():' wrapper.
+# Place the st.download_button inside the fixed div
 st.download_button(
     label="Download All Notes 🤫",
     data=download_data.encode('utf-8'),
@@ -207,10 +214,10 @@ st.download_button(
 st.markdown('</div>', unsafe_allow_html=True)
 
 
-# If the love button was clicked, render a temporary floating hearts animation
+# If the love button was clicked, render a temporary floating heart/flower animation
 trigger = st.session_state.love_clicks
 
-# HTML+JS for floating hearts on button click.
+# HTML+JS for temporary floating animation on button click.
 floating_hearts_html = f"""
 <div id="heart-container" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:100;"></div>
 <style>
@@ -223,10 +230,11 @@ floating_hearts_html = f"""
 <script>
 (function(){{
     const container = document.getElementById('heart-container');
-    // clear previous hearts
+    // clear previous animation elements
     container.innerHTML = '';
-    const colors = ['❤️','💖','💘','💕','💞'];
-    const count = 14; // number of hearts to spawn each click
+    // Changed colors to flower/plant emojis
+    const colors = ['🌼','🌸','🌷','🌱','💐','💖']; 
+    const count = 14; 
     for (let i=0;i<count;i++) {{
         const el = document.createElement('div');
         el.className = 'float-heart';
@@ -235,8 +243,10 @@ floating_hearts_html = f"""
         el.style.fontSize = (16 + Math.random()*30) + 'px';
         el.style.opacity = 1;
         el.style.transform = 'translateY(0)';
+        // Randomly select a flower/heart emoji
         el.innerText = colors[Math.floor(Math.random()*colors.length)];
         container.appendChild(el);
+        
         // stagger animations
         (function(e, delay){{
             setTimeout(function(){{
@@ -256,4 +266,4 @@ floating_hearts_html = f"""
 components.html(floating_hearts_html, height=1)
 
 st.write('---')
-st.caption(f"Made with ❤️ for you — {datetime.now().year}")
+st.caption(f"Made with 🌼 for you — {datetime.now().year}")
