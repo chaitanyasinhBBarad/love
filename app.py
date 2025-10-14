@@ -11,6 +11,7 @@ st.markdown("""
 <style>
 /* --- Main Background (Original pink gradient) --- */
 html, body, [data-testid="stAppViewContainer"] > .main {
+    /* Reverting to the original pink gradient */
     background: linear-gradient(135deg, #ffd6e0, #fff0f5);
     position: relative; 
     z-index: 0; 
@@ -153,6 +154,8 @@ messages = [
     "I love you more every single day 🌸",
     "You’re my sunshine and my perfect bouquet 💐",
     "With you, ordinary moments become beautiful blossoms 💫",
+    # USER'S NEW MESSAGE ADDED HERE
+    "YOURE THE MOST SWEETEST POOKIES MY KUCHUPUCHU RASMALI"
 ]
 
 if "custom_msgs" not in st.session_state:
@@ -167,6 +170,7 @@ with col1:
     # Button label changed to floral theme
     if st.button("🌷 Send a sweet message 🌷"):
         st.session_state.love_clicks += 1
+        # Logic to combine default messages and user-added messages is correct.
         msg_list = messages + st.session_state.custom_msgs
         chosen = random.choice(msg_list)
         st.success(chosen)
