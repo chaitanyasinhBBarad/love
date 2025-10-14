@@ -168,7 +168,7 @@ st.subheader("💌Love Message for MY KUCHUPUCHU RASMALI")
 col1, col2 = st.columns([1,1])
 with col1:
     # Button label changed to floral theme
-    if st.button("🌷 your beauty is so glorious by itself its just have its own dimansion to decode not even binary or matrixes can work in it (you called me drunk when i wrte this ) 🌷"):
+    if st.button("🌷a message for you 🌷"):
         st.session_state.love_clicks += 1
         # Logic to combine default messages and user-added messages is correct.
         msg_list = messages + st.session_state.custom_msgs
