@@ -270,4 +270,4 @@ floating_hearts_html = f"""
 components.html(floating_hearts_html, height=1)
 
 st.write('---')
-st.caption(f"Made with 🌼 for you — {datetime.now().year}")
+st.caption(f"Made by loving husband🌼 for you — {datetime.now().year.month.date}")
