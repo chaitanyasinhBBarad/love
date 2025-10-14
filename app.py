@@ -2,10 +2,11 @@ import streamlit as st
 import random
 from datetime import datetime
 import streamlit.components.v1 as components
+# Note: Removed smtplib imports as per previous request to avoid email
 
 st.set_page_config(page_title="Love App 💖", page_icon="💌", layout="centered")
 
-# CSS for background, tree, and general styling
+# --- CSS for background, tree, and general styling ---
 st.markdown("""
 <style>
 html, body, [data-testid="stAppViewContainer"] > .main {
@@ -65,6 +66,26 @@ html, body, [data-testid="stAppViewContainer"] > .main {
 
 /* Container to keep components above background */
 .content-wrapper { position: relative; z-index: 2; }
+
+/* --- NEW: Fixed Position Container for Download Button --- */
+.fixed-download-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000; /* Ensure it stays above everything */
+    /* Remove default Streamlit padding from container */
+    padding: 0; 
+}
+
+/* Style the button inside the fixed container differently if needed */
+.fixed-download-container .stDownloadButton>button {
+    background: #007bff; /* Blue for a 'secret' admin button */
+    color: white;
+    border-radius: 8px;
+    padding: 8px 15px;
+    font-size: 14px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,11 +140,39 @@ if st.button("💌 Add Message") and new_msg:
     st.session_state.custom_msgs.append(new_msg)
     st.success("Added! Now it’s part of our love collection 💞")
 
+# --- ADMIN FEATURE: Download All Custom Messages ---
+
+# Prepare the data for download
+download_data = "--- Love Note Collection ---\n"
+if st.session_state.custom_msgs:
+    for i, msg in enumerate(st.session_state.custom_msgs):
+        download_data += f"\nNote {i+1}:\n"
+        download_data += f"  Text: {msg}\n"
+else:
+    download_data += "\nNo custom messages yet."
+
+# Use st.markdown and the fixed container CSS to position the button
+
+st.markdown('<div class="fixed-download-container">', unsafe_allow_html=True)
+
+# Place the st.download_button inside the fixed div using a temporary container (this is a Streamlit hack)
+with st.container():
+    st.download_button(
+        label="Download All Notes 🤫",
+        data=download_data.encode('utf-8'),
+        file_name=f"LoveNotes_History_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+        mime="text/plain",
+        key="admin_download_key" # Added key for uniqueness
+    )
+
+st.markdown('</div>', unsafe_allow_html=True)
+# The button is now physically located within the HTML container which is fixed to the bottom-right.
+
+
 # If the love button was clicked, render a temporary floating hearts animation
 trigger = st.session_state.love_clicks
 
 # HTML+JS for floating hearts on button click.
-# The component re-renders and executes the JS ONLY when the 'trigger' variable changes (i.e., when a button is clicked).
 floating_hearts_html = f"""
 <div id="heart-container" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999;"></div>
 <style>
@@ -135,8 +184,6 @@ floating_hearts_html = f"""
 </style>
 <script>
 (function(){{
-    // The previous ineffective check has been removed.
-    // The JS runs once per button click because the f-string content (which includes the 'trigger' variable) changes, forcing a re-render of the component.
     const container = document.getElementById('heart-container');
     // clear previous hearts
     container.innerHTML = '';
