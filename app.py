@@ -2,14 +2,149 @@ import streamlit as st
 import random
 from datetime import datetime
 import streamlit.components.v1 as components
+import re
+import pandas as pd
+from collections import Counter
+import io # Added for file handling
+
+# --- Python functions for chat analysis logic ---
+
+def parse_chat(chat_text):
+    """
+    Parses WhatsApp chat text into a structured list of messages.
+    Handles multi-line messages and identifies key omissions.
+    """
+    # Regex pattern to match a standard WhatsApp message line: [DD/MM/YY, HH:MM:SS AM/PM] Sender: Message
+    # The pattern is complex to handle the exact timestamp format and different sender names.
+    # The file is zipped, so the format seems consistent: [DD/MM/YY, HH:MM:SS AM/PM] Sender: Message
+    pattern = re.compile(r'^\[(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2}:\d{2} (?:AM|PM))\] (.+?): (.*)$')
+    messages = []
+    
+    # Clean up the text: remove the byte order mark and split lines
+    text = chat_text.strip().replace('\ufeff', '')
+    
+    current_message = None
+
+    # Using io.StringIO to treat the string as a file object for line-by-line reading
+    for line in io.StringIO(text):
+        line = line.strip()
+        if not line:
+            continue
+            
+        match = pattern.match(line)
+        
+        if match:
+            # Start of a new message
+            timestamp_str, sender, message_content = match.groups()
+            
+            # The system message is the first line of the chat
+            if message_content.startswith('‎Messages and calls are end-to-end encrypted'):
+                continue 
+
+            current_message = {
+                'Timestamp': datetime.strptime(timestamp_str, '%d/%m/%y, %I:%M:%S %p'),
+                'Sender': sender.strip(),
+                'Message': message_content.strip()
+            }
+            messages.append(current_message)
+            
+        elif current_message:
+            # Continuation of a multi-line message
+            current_message['Message'] += ' ' + line
+
+    return pd.DataFrame(messages)
+
+
+def analyze_chat_data(df, user_1, user_2):
+    """Performs core analysis on the chat DataFrame."""
+    if df.empty:
+        return None
+
+    # --- Core Metrics ---
+    total_messages = len(df)
+    messages_1 = df[df['Sender'] == user_1]
+    messages_2 = df[df['Sender'] == user_2]
+
+    # --- Word Counting and Cleaning ---
+    
+    # Custom stop words (English + common chat filler/emojis)
+    STOP_WORDS = set([
+        'a', 'an', 'the', 'is', 'am', 'are', 'was', 'were', 'and', 'but', 'or', 'to', 'of', 'in', 'on', 'it', 'i', 'you', 
+        'my', 'me', 'at', 'that', 'this', 'we', 'he', 'she', 'they', 'what', 'who', 'when', 'where', 'why', 'how', 'do', 
+        'did', 'will', 'have', 'had', 'for', 'just', 'too', 'nah', 'yk', 'cuz', 'af', 'your', 'with', 'even', 'one', 'be',
+        'omitted', 'sticker', 'image', 'video', 'audio', 'gif', 'media', 'messages', 'calls', 'are', 'endtoend', 'encrypted',
+        # Common emojis/tokens found in this specific chat
+        '😂😂😂', '😂', '😂😂', '😂😂😂😂', '🥹', '✨', '🤧', '🫠', '🤌', '🫡', '🤝', '💗', '🌸', '~', 'msg', 'deleted', 'this'
+    ])
+
+    def get_word_counts(messages_df):
+        text = ' '.join(messages_df['Message'].astype(str).str.lower())
+        # Clean text: remove punctuation but keep spaces for tokenization
+        text = re.sub(r'[^a-z0-9\s]', '', text) 
+        words = text.split()
+        
+        # Filter out stop words and single-letter tokens
+        filtered_words = [word for word in words if word not in STOP_WORDS and len(word) > 1]
+        return Counter(filtered_words), len(words) # Return total word count before filtering
+
+    # Get word counts for each user
+    counter_1, total_words_1 = get_word_counts(messages_1)
+    counter_2, total_words_2 = get_word_counts(messages_2)
+    
+    # Combine counters for total top words
+    total_counter = counter_1 + counter_2
+    
+    # --- Date & Time Metrics ---
+    start_date = df['Timestamp'].min().strftime('%d %B %Y')
+    end_date = df['Timestamp'].max().strftime('%d %B %Y')
+    
+    # Hourly Activity
+    hourly_activity = df.groupby(df['Timestamp'].dt.hour)['Message'].count().reset_index()
+    hourly_activity.columns = ['Hour', 'Message Count']
+    
+    # --- Pet Name Counts (Case-Insensitive) ---
+    def count_pet_name(df_messages, term):
+        return df_messages['Message'].str.lower().str.contains(r'\b' + re.escape(term) + r'\b', na=False).sum()
+
+    pet_names = {
+        'baby': (count_pet_name(messages_1, 'baby'), count_pet_name(messages_2, 'baby')),
+        'love': (count_pet_name(messages_1, 'love'), count_pet_name(messages_2, 'love')),
+        'darling': (count_pet_name(messages_1, 'darling'), count_pet_name(messages_2, 'darling')),
+        'sweetheart': (count_pet_name(messages_1, 'sweetheart'), count_pet_name(messages_2, 'sweetheart')),
+        'dobi': (count_pet_name(messages_1, 'dobi'), count_pet_name(messages_2, 'dobi'))
+    }
+
+    # --- Final structured results ---
+    results = {
+        'total_messages': total_messages,
+        'start_date': start_date,
+        'end_date': end_date,
+        'users': {
+            user_1: {
+                'messages': len(messages_1),
+                'words': total_words_1,
+                'media': messages_1['Message'].str.contains('omitted', na=False).sum()
+            },
+            user_2: {
+                'messages': len(messages_2),
+                'words': total_words_2,
+                'media': messages_2['Message'].str.contains('omitted', na=False).sum()
+            }
+        },
+        'top_words': total_counter.most_common(10),
+        'hourly_activity': hourly_activity,
+        'pet_names': pet_names
+    }
+    
+    return results
 
 # Set page icon to a daisy
 st.set_page_config(page_title="🌼", page_icon="🌼", layout="centered")
 
-# --- Python function for the live duration counter ---
+# --- Python functions for app logic ---
+
 def calculate_duration_live(start_date_str):
     """Calculates and formats the relationship duration from the start date to now."""
-    # Note: Using simple division for years/months is an approximation but safe for a live Streamlit counter.
     start_date = datetime.strptime(start_date_str, '%d/%m/%Y')
     today = datetime.now()
     delta = today - start_date
@@ -57,7 +192,7 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-/* --- Falling Daisy Animation (Re-introduced) --- */
+/* --- Falling Daisy Animation --- */
 .daisy-container {
     position: fixed;
     top: 0;
@@ -66,12 +201,12 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     height: 100%;
     pointer-events: none;
     overflow: hidden;
-    z-index: 5; /* Below main content, above background */
+    z-index: 5; 
     opacity: 0.7; 
 }
 .daisy {
     position: absolute;
-    color: #FFF; /* Pure white center */
+    color: #FFF; 
     font-size: 20px;
     opacity: 0; 
     animation: daisyFall 20s linear infinite; 
@@ -82,7 +217,7 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     10% { opacity: 0.9; }
     100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
-/* Staggering daisy animation delays */
+/* Staggering daisy animation delays (Retained from user's file) */
 .daisy:nth-child(1) { animation-delay: 0s; left: 5%; font-size: 25px;}
 .daisy:nth-child(2) { animation-delay: 1.5s; left: 15%; font-size: 20px;}
 .daisy:nth-child(3) { animation-delay: 2s; left: 25%; font-size: 30px;}
@@ -167,7 +302,7 @@ st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
 st.markdown('<h1 class="title-text">🌼 For Drishu 🌼</h1>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-text">A little garden of love just for you 💐</div>', unsafe_allow_html=True)
 
-# --- RELATIONSHIP COUNTER ADDED HERE ---
+# --- RELATIONSHIP COUNTER ---
 start_date_str = "14/05/2020"
 duration_str, total_days = calculate_duration_live(start_date_str)
 
@@ -205,7 +340,6 @@ with col1:
     # Button label changed to floral theme
     if st.button("🌷a message for you 🌷"):
         st.session_state.love_clicks += 1
-        # Logic to combine default messages and user-added messages is correct.
         msg_list = messages + st.session_state.custom_msgs
         chosen = random.choice(msg_list)
         st.success(chosen)
@@ -218,9 +352,87 @@ with col2:
 
 st.subheader("💬 atheiest me belive in god when i had you ")
 new_msg = st.text_input("here dobi")
-if st.button("🌸 write what ever you want to baby") and new_msg: # Button label changed
+if st.button("🌸 write what ever you want to baby") and new_msg: 
     st.session_state.custom_msgs.append(new_msg)
     st.success("Added! Now it’s a beautiful petal in our collection 🌸")
+
+# --- WHATSAPP ANALYSIS SECTION (Updated to include logic) ---
+st.markdown("---")
+st.subheader("📊 Our WhatsApp Chat Analysis (The Story of Us)")
+st.caption("Upload your exported WhatsApp chat (.txt file) to see who says 'I love you' more! (Privacy Note: The file is only processed here and not saved.)")
+
+uploaded_file = st.file_uploader("Upload Chat File (.txt)", type=["txt"])
+
+if uploaded_file is not None:
+    # Read file content
+    bytes_data = uploaded_file.read()
+    chat_text = bytes_data.decode("utf-8")
+    
+    # Define the two user names found in the chat file for analysis (Update this if names change)
+    USER_1 = "Little Mouse 💗🌸"
+    USER_2 = "Chaitanya ~"
+
+    # Process and Analyze
+    with st.spinner("Analyzing our love language..."):
+        chat_df = parse_chat(chat_text)
+        if not chat_df.empty:
+            analysis_results = analyze_chat_data(chat_df, USER_1, USER_2)
+            
+            st.success(f"Analysis complete! Chat from {analysis_results['start_date']} to {analysis_results['end_date']}.")
+
+            # --- General Stats ---
+            colA, colB, colC = st.columns(3)
+            colA.metric("Total Messages", analysis_results['total_messages'])
+            colB.metric(f"Words by {USER_1.split()[0]}", analysis_results['users'][USER_1]['words'])
+            colC.metric(f"Words by {USER_2.split()[0]}", analysis_results['users'][USER_2]['words'])
+
+            # --- Message & Media Breakdown ---
+            st.markdown("### Message Volume")
+            msg_data = pd.DataFrame({
+                'Metric': ['Total Messages', 'Media (Stickers/Files)'],
+                USER_1: [analysis_results['users'][USER_1]['messages'], analysis_results['users'][USER_1]['media']],
+                USER_2: [analysis_results['users'][USER_2]['messages'], analysis_results['users'][USER_2]['media']]
+            }).set_index('Metric')
+            st.table(msg_data)
+            
+            # --- Pet Name Battle ---
+            st.markdown("### The Pet Name Battle 💖")
+            
+            pet_name_data = []
+            for name, counts in analysis_results['pet_names'].items():
+                pet_name_data.append({
+                    'Pet Name': name.capitalize(),
+                    USER_1: counts[0],
+                    USER_2: counts[1]
+                })
+            
+            df_pet_names = pd.DataFrame(pet_name_data).set_index('Pet Name')
+            st.table(df_pet_names)
+            
+            # Highlight the winner of "baby"
+            winner = USER_1 if df_pet_names.loc['Baby', USER_1] > df_pet_names.loc['Baby', USER_2] else USER_2
+            st.info(f"The winner of the **'Baby'** award is: **{winner.split()[0]}!**")
+            
+            
+            # --- Detailed Breakdown (Expander) ---
+            with st.expander("More Detailed Insights"):
+                
+                st.markdown("#### Top 10 Most Used Words (Excluding stop words & emojis) 📜")
+                words_df = pd.DataFrame(analysis_results['top_words'], columns=['Word', 'Count'])
+                st.table(words_df)
+                st.caption("Looks like **'baby'** and **'love'** are the foundations of your conversations! 😊")
+
+                st.markdown("#### Hourly Activity Chart 🕰️")
+                # Add a column for the 24-hour clock label (e.g., 0 for 12 AM, 13 for 1 PM)
+                analysis_results['hourly_activity']['Time (24h)'] = analysis_results['hourly_activity']['Hour'].astype(str) + ':00'
+                
+                st.bar_chart(analysis_results['hourly_activity'].set_index('Time (24h)'))
+                st.caption("Find out your peak hour of love! (0 is 12:00 AM, 23 is 11:00 PM)")
+
+        else:
+            st.error("Could not parse any messages from the uploaded file. Please ensure the chat was exported without media.")
+
+# --- END ANALYSIS SECTION ---
 
 # Close the content-wrapper div
 st.markdown('</div>', unsafe_allow_html=True)
@@ -268,10 +480,10 @@ floating_hearts_html = f"""
 </style>
 <script>
 (function(){{
+    const trigger = {trigger};
+    if (!trigger) return;
     const container = document.getElementById('heart-container');
-    // clear previous animation elements
     container.innerHTML = '';
-    // Changed colors to flower/plant emojis
     const colors = ['🌼','🌸','🌷','🌱','💐','💖']; 
     const count = 14; 
     for (let i=0;i<count;i++) {{
@@ -282,17 +494,14 @@ floating_hearts_html = f"""
         el.style.fontSize = (16 + Math.random()*30) + 'px';
         el.style.opacity = 1;
         el.style.transform = 'translateY(0)';
-        // Randomly select a flower/heart emoji
         el.innerText = colors[Math.floor(Math.random()*colors.length)];
         container.appendChild(el);
         
-        // stagger animations
         (function(e, delay){{
             setTimeout(function(){{
                 e.style.transition = 'transform 1400ms ease-out, opacity 1400ms ease-out';
                 e.style.transform = 'translateY(-40vh) translateX(' + (Math.random()*60-30) + 'px) scale(1.3)';
                 e.style.opacity = 0;
-                // remove after animation
                 setTimeout(function(){{ e.remove(); }}, 1500);
             }}, delay);
         }})(el, i*70);
@@ -303,9 +512,6 @@ floating_hearts_html = f"""
 
 # Embed the HTML.
 components.html(floating_hearts_html, height=1)
-
-st.write('---')
-st.caption(f"Made by loving husband🌼 for you — {datetime.now().year}")
 
 st.write('---')
 st.caption(f"Made by loving husband🌼 for you — {datetime.now().year}")
