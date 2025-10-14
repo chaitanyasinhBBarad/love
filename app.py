@@ -116,9 +116,9 @@ html, body, [data-testid="stAppViewContainer"] > .main {
 .fixed-download-container .stDownloadButton>button {
     background: #007bff;
     color: white;
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 8px 15px;
-    font-size: 14px;
+    font-size: 8px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 </style>
@@ -207,7 +207,7 @@ st.markdown('<div class="fixed-download-container">', unsafe_allow_html=True)
 
 # Place the st.download_button inside the fixed div
 st.download_button(
-    label="Download All Notes 🤫",
+    label="Download All Notes ",
     data=download_data.encode('utf-8'),
     file_name=f"LoveNotes_History_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
     mime="text/plain",
