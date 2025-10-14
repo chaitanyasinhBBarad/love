@@ -140,7 +140,7 @@ st.markdown(daisy_html, unsafe_allow_html=True)
 st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
 
 # Updated Title with Daisies
-st.markdown('<h1 class="title-text">🌼 For Drishya — Flower Love App 🌼</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="title-text">🌼 For Drishu 🌼</h1>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-text">A little garden of love just for you 💐</div>', unsafe_allow_html=True)
 
 # Floral Tree visual (Changed emojis)
