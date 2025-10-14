@@ -15,8 +15,6 @@ def parse_chat(chat_text):
     Handles multi-line messages and identifies key omissions.
     """
     # Regex pattern to match a standard WhatsApp message line: [DD/MM/YY, HH:MM:SS AM/PM] Sender: Message
-    # The pattern is complex to handle the exact timestamp format and different sender names.
-    # The file is zipped, so the format seems consistent: [DD/MM/YY, HH:MM:SS AM/PM] Sender: Message
     pattern = re.compile(r'^\[(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2}:\d{2} (?:AM|PM))\] (.+?): (.*)$')
     messages = []
     
@@ -37,7 +35,7 @@ def parse_chat(chat_text):
             # Start of a new message
             timestamp_str, sender, message_content = match.groups()
             
-            # The system message is the first line of the chat
+            # Skip the system message
             if message_content.startswith('‎Messages and calls are end-to-end encrypted'):
                 continue 
 
@@ -64,6 +62,27 @@ def analyze_chat_data(df, user_1, user_2):
     total_messages = len(df)
     messages_1 = df[df['Sender'] == user_1]
     messages_2 = df[df['Sender'] == user_2]
+    
+    # --- Identify Special Message Types (Media & Deleted) ---
+    
+    # Identify Deleted Messages
+    deleted_msgs_1 = messages_1['Message'].str.contains('This message was deleted', na=False, case=False).sum()
+    deleted_msgs_2 = messages_2['Message'].str.contains('This message was deleted', na=False, case=False).sum()
+
+    # Identify Media Messages (Media messages will typically say "omitted" or similar)
+    media_msgs_1 = messages_1['Message'].str.contains('omitted', na=False, case=False).sum()
+    media_msgs_2 = messages_2['Message'].str.contains('omitted', na=False, case=False).sum()
+
+    # --- Filter messages down to only TEXT content for word counting & pet name counting ---
+    # We use a combined filter to ensure accuracy.
+    text_filter = ~df['Message'].str.contains('omitted|deleted', na=False, case=False)
+    
+    messages_1_text_only = df[df['Sender'] == user_1][text_filter]
+    messages_2_text_only = df[df['Sender'] == user_2][text_filter]
+    
+    # Total text messages sent is the count of messages that are NOT media or deleted
+    text_messages_sent_1 = len(messages_1_text_only)
+    text_messages_sent_2 = len(messages_2_text_only)
 
     # --- Word Counting and Cleaning ---
     
@@ -85,11 +104,12 @@ def analyze_chat_data(df, user_1, user_2):
         
         # Filter out stop words and single-letter tokens
         filtered_words = [word for word in words if word not in STOP_WORDS and len(word) > 1]
-        return Counter(filtered_words), len(words) # Return total word count before filtering
+        # Total words is the count before stop word filtering
+        return Counter(filtered_words), len(words) 
 
-    # Get word counts for each user
-    counter_1, total_words_1 = get_word_counts(messages_1)
-    counter_2, total_words_2 = get_word_counts(messages_2)
+    # Get word counts for each user (using text-only filtered data)
+    counter_1, total_words_1 = get_word_counts(messages_1_text_only)
+    counter_2, total_words_2 = get_word_counts(messages_2_text_only)
     
     # Combine counters for total top words
     total_counter = counter_1 + counter_2
@@ -104,14 +124,15 @@ def analyze_chat_data(df, user_1, user_2):
     
     # --- Pet Name Counts (Case-Insensitive) ---
     def count_pet_name(df_messages, term):
+        # Count pet names in text-only messages to avoid counting in "Media omitted"
         return df_messages['Message'].str.lower().str.contains(r'\b' + re.escape(term) + r'\b', na=False).sum()
 
     pet_names = {
-        'baby': (count_pet_name(messages_1, 'baby'), count_pet_name(messages_2, 'baby')),
-        'love': (count_pet_name(messages_1, 'love'), count_pet_name(messages_2, 'love')),
-        'darling': (count_pet_name(messages_1, 'darling'), count_pet_name(messages_2, 'darling')),
-        'sweetheart': (count_pet_name(messages_1, 'sweetheart'), count_pet_name(messages_2, 'sweetheart')),
-        'dobi': (count_pet_name(messages_1, 'dobi'), count_pet_name(messages_2, 'dobi'))
+        'baby': (count_pet_name(messages_1_text_only, 'baby'), count_pet_name(messages_2_text_only, 'baby')),
+        'love': (count_pet_name(messages_1_text_only, 'love'), count_pet_name(messages_2_text_only, 'love')),
+        'darling': (count_pet_name(messages_1_text_only, 'darling'), count_pet_name(messages_2_text_only, 'darling')),
+        'sweetheart': (count_pet_name(messages_1_text_only, 'sweetheart'), count_pet_name(messages_2_text_only, 'sweetheart')),
+        'dobi': (count_pet_name(messages_1_text_only, 'dobi'), count_pet_name(messages_2_text_only, 'dobi'))
     }
 
     # --- Final structured results ---
@@ -121,14 +142,18 @@ def analyze_chat_data(df, user_1, user_2):
         'end_date': end_date,
         'users': {
             user_1: {
-                'messages': len(messages_1),
-                'words': total_words_1,
-                'media': messages_1['Message'].str.contains('omitted', na=False).sum()
+                'messages': len(messages_1), # Total entries
+                'words': total_words_1, # Word count from text-only entries
+                'text_sent': text_messages_sent_1,
+                'media': media_msgs_1,
+                'deleted': deleted_msgs_1
             },
             user_2: {
                 'messages': len(messages_2),
                 'words': total_words_2,
-                'media': messages_2['Message'].str.contains('omitted', na=False).sum()
+                'text_sent': text_messages_sent_2,
+                'media': media_msgs_2,
+                'deleted': deleted_msgs_2
             }
         },
         'top_words': total_counter.most_common(10),
@@ -350,11 +375,24 @@ with col2:
         st.session_state.love_clicks += 1
         st.info("Daisy sent! 🌼")
 
+# --- CUSTOM MESSAGE INPUT (MODIFIED SECTION) ---
 st.subheader("💬 atheiest me belive in god when i had you ")
-new_msg = st.text_input("here dobi")
+# Added a key for better session management
+new_msg = st.text_input("here dobi", key="new_note_input") 
 if st.button("🌸 write what ever you want to baby") and new_msg: 
     st.session_state.custom_msgs.append(new_msg)
     st.success("Added! Now it’s a beautiful petal in our collection 🌸")
+    # New feature: Display the message immediately after saving
+    st.info(f"**Just saved:** *{new_msg}*")
+
+# New feature: Display all notes added in the current session
+if st.session_state.custom_msgs:
+    st.markdown("---")
+    st.markdown("#### Notes Written This Session:")
+    # Display the most recent notes first
+    for i, msg in enumerate(reversed(st.session_state.custom_msgs)):
+        st.text(f"🌸 {msg}")
+# --- END CUSTOM MESSAGE INPUT ---
 
 # --- WHATSAPP ANALYSIS SECTION (Updated to include logic) ---
 st.markdown("---")
@@ -387,12 +425,24 @@ if uploaded_file is not None:
             colC.metric(f"Words by {USER_2.split()[0]}", analysis_results['users'][USER_2]['words'])
 
             # --- Message & Media Breakdown ---
-            st.markdown("### Message Volume")
+            st.markdown("### Message Volume Breakdown")
+            
             msg_data = pd.DataFrame({
-                'Metric': ['Total Messages', 'Media (Stickers/Files)'],
-                USER_1: [analysis_results['users'][USER_1]['messages'], analysis_results['users'][USER_1]['media']],
-                USER_2: [analysis_results['users'][USER_2]['messages'], analysis_results['users'][USER_2]['media']]
+                'Metric': ['Total Entries in Chat', 'Text Messages Sent', 'Media (Stickers/Files)', 'Message Deleted 🗑️'],
+                USER_1: [
+                    analysis_results['users'][USER_1]['messages'],
+                    analysis_results['users'][USER_1]['text_sent'], 
+                    analysis_results['users'][USER_1]['media'],
+                    analysis_results['users'][USER_1]['deleted']
+                ],
+                USER_2: [
+                    analysis_results['users'][USER_2]['messages'],
+                    analysis_results['users'][USER_2]['text_sent'],
+                    analysis_results['users'][USER_2]['media'],
+                    analysis_results['users'][USER_2]['deleted']
+                ]
             }).set_index('Metric')
+            
             st.table(msg_data)
             
             # --- Pet Name Battle ---
@@ -420,7 +470,7 @@ if uploaded_file is not None:
                 st.markdown("#### Top 10 Most Used Words (Excluding stop words & emojis) 📜")
                 words_df = pd.DataFrame(analysis_results['top_words'], columns=['Word', 'Count'])
                 st.table(words_df)
-                st.caption("Looks like **'baby'** and **'love'** are the foundations of your conversations! 😊")
+                st.caption("Find your unique love vocabulary! 😊")
 
                 st.markdown("#### Hourly Activity Chart 🕰️")
                 # Add a column for the 24-hour clock label (e.g., 0 for 12 AM, 13 for 1 PM)
