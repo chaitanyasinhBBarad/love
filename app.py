@@ -148,12 +148,12 @@ st.markdown('<div class="love-tree"><div class="tree">🌸🌳🌼</div></div>',
 
 # Messages (Using flower emojis)
 messages = [
-    "You are my favorite daisy in the field 🌼",
-    "Every moment with you feels like a spring morning 🌷",
-    "You make my heart bloom 😊",
+    "i cant eat you i will get diabetes cuz youre too sweet for even a guju like me 🌼",
+    "most percious pookie of all time 🌷",
+    "sorry to make you cry last month baby 😊",
     "I love you more every single day 🌸",
-    "You’re my sunshine and my perfect bouquet 💐",
-    "With you, ordinary moments become beautiful blossoms 💫",
+    "You’re my baby may you glow everday 💐",
+    " your beauty is so glorious by itself its just have its own dimansion to decode not even binary or matrixes can work in it (you called me drunk when i wrte this ) 💫",
     # USER'S NEW MESSAGE ADDED HERE
     "YOURE THE MOST SWEETEST POOKIES MY KUCHUPUCHU RASMALI"
 ]
