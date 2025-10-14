@@ -4,7 +4,7 @@ from datetime import datetime
 import streamlit.components.v1 as components
 
 # Set page icon to a daisy
-st.set_page_config(page_title="Flower Love App 🌼", page_icon="🌼", layout="centered")
+st.set_page_config(page_title="🌼", page_icon="🌼", layout="centered")
 
 # --- CSS for background, falling daisies, and general styling ---
 st.markdown("""
@@ -164,11 +164,11 @@ if "custom_msgs" not in st.session_state:
 if "love_clicks" not in st.session_state:
     st.session_state.love_clicks = 0
 
-st.subheader("💌 Random Love Message")
+st.subheader("💌Love Message for MY KUCHUPUCHU RASMALI")
 col1, col2 = st.columns([1,1])
 with col1:
     # Button label changed to floral theme
-    if st.button("🌷 Send a sweet message 🌷"):
+    if st.button("🌷 your beauty is so glorious by itself its just have its own dimansion to decode not even binary or matrixes can work in it (you called me drunk when i wrte this ) 🌷"):
         st.session_state.love_clicks += 1
         # Logic to combine default messages and user-added messages is correct.
         msg_list = messages + st.session_state.custom_msgs
@@ -181,9 +181,9 @@ with col2:
         st.session_state.love_clicks += 1
         st.info("Daisy sent! 🌼")
 
-st.subheader("💬 Add Your Own Love Note")
-new_msg = st.text_input("Write something sweet...")
-if st.button("🌸 Add Message") and new_msg: # Button label changed
+st.subheader("💬 atheiest me belive in god when i had you ")
+new_msg = st.text_input("here dobi")
+if st.button("🌸 write what ever you want to baby") and new_msg: # Button label changed
     st.session_state.custom_msgs.append(new_msg)
     st.success("Added! Now it’s a beautiful petal in our collection 🌸")
 
