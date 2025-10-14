@@ -6,12 +6,38 @@ import streamlit.components.v1 as components
 # Set page icon to a daisy
 st.set_page_config(page_title="🌼", page_icon="🌼", layout="centered")
 
+# --- Python function for the live duration counter ---
+def calculate_duration_live(start_date_str):
+    """Calculates and formats the relationship duration from the start date to now."""
+    # Note: Using simple division for years/months is an approximation but safe for a live Streamlit counter.
+    start_date = datetime.strptime(start_date_str, '%d/%m/%Y')
+    today = datetime.now()
+    delta = today - start_date
+
+    total_seconds = int(delta.total_seconds())
+    
+    # Approximate years/months based on seconds for a friendly display
+    years = total_seconds // (365 * 24 * 3600)
+    remaining_seconds = total_seconds % (365 * 24 * 3600)
+    
+    # Using 30 days as a standard for a month approximation
+    months = remaining_seconds // (30 * 24 * 3600)
+    remaining_seconds = remaining_seconds % (30 * 24 * 3600)
+    
+    days = remaining_seconds // (24 * 3600)
+    remaining_seconds = remaining_seconds % (24 * 3600)
+    
+    hours = remaining_seconds // 3600
+    
+    duration_str = f"{years} years, {months} months, {days} days, {hours} hours"
+    
+    return duration_str, delta.days
+
 # --- CSS for background, falling daisies, and general styling ---
 st.markdown("""
 <style>
-/* --- Main Background (Original pink gradient) --- */
+/* --- Main Background (Set to Pink Gradient) --- */
 html, body, [data-testid="stAppViewContainer"] > .main {
-    /* FIXED: Background set back to the pink gradient */
     background: linear-gradient(135deg, #ffd6e0, #fff0f5);
     position: relative; 
     z-index: 0; 
@@ -31,7 +57,7 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-/* --- Falling Daisy Animation (More prominent) --- */
+/* --- Falling Daisy Animation (Re-introduced) --- */
 .daisy-container {
     position: fixed;
     top: 0;
@@ -41,7 +67,7 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     pointer-events: none;
     overflow: hidden;
     z-index: 5; /* Below main content, above background */
-    opacity: 0.7; /* Slightly more visible */
+    opacity: 0.7; 
 }
 .daisy {
     position: absolute;
@@ -49,7 +75,6 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     font-size: 20px;
     opacity: 0; 
     animation: daisyFall 20s linear infinite; 
-    /* Using text-shadow to give the emoji a subtle glow/border */
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
 }
 @keyframes daisyFall {
@@ -57,7 +82,7 @@ html, body, [data-testid="stAppViewContainer"] > .main {
     10% { opacity: 0.9; }
     100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
-/* Staggering daisy animation delays (Increased number of daisies) */
+/* Staggering daisy animation delays */
 .daisy:nth-child(1) { animation-delay: 0s; left: 5%; font-size: 25px;}
 .daisy:nth-child(2) { animation-delay: 1.5s; left: 15%; font-size: 20px;}
 .daisy:nth-child(3) { animation-delay: 2s; left: 25%; font-size: 30px;}
@@ -76,56 +101,55 @@ html, body, [data-testid="stAppViewContainer"] > .main {
 
 /* --- Other Styling --- */
 .title-text {
-    color: #5e0035;
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    text-align: center;
+    color: #5e0035;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    text-align: center;
 }
 .subtitle-text {
-    text-align: center;
-    color: #7a0b3b;
-    margin-top: -10px;
-    margin-bottom: 20px;
+    text-align: center;
+    color: #7a0b3b;
+    margin-top: -10px;
+    margin-bottom: 20px;
 }
 /* Floral tree visual */
 .love-tree { text-align: center; margin-top: 10px; margin-bottom: 10px; z-index: 1; }
 .tree { font-size: 72px; animation: sway 3s ease-in-out infinite; }
 @keyframes sway {
-    0%, 100% { transform: rotate(-2deg); }
-    50% { transform: rotate(2deg); }
+    0%, 100% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
 }
 
 /* Custom button styling */
 .stButton>button {
-    background: linear-gradient(90deg,#ff7aa2,#ff4b6e);
-    color: white;
-    border-radius: 24px;
-    padding: 10px 28px;
-    font-size: 18px;
+    background: linear-gradient(90deg,#ff7aa2,#ff4b6e);
+    color: white;
+    border-radius: 24px;
+    padding: 10px 28px;
+    font-size: 18px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 /* --- Fixed Position Container for Download Button --- */
 .fixed-download-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000; 
-    padding: 0; 
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000; 
+    padding: 0; 
 }
 
 .fixed-download-container .stDownloadButton>button {
-    background: #007bff;
-    color: white;
-    border-radius: 4px;
-    padding: 8px 15px;
-    font-size: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+    padding: 8px 15px;
+    font-size: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 </style>
 """, unsafe_allow_html=True)
 
 # --- Falling Daisies Animation (HTML) ---
-# Increased the number of daisies
 daisy_html = """
 <div class="daisy-container">
     <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
@@ -143,10 +167,22 @@ st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
 st.markdown('<h1 class="title-text">🌼 For Drishu 🌼</h1>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-text">A little garden of love just for you 💐</div>', unsafe_allow_html=True)
 
-# Floral Tree visual (Changed emojis)
+# --- RELATIONSHIP COUNTER ADDED HERE ---
+start_date_str = "14/05/2020"
+duration_str, total_days = calculate_duration_live(start_date_str)
+
+st.metric(
+    label="Our journey since 14/05/2020", 
+    value=duration_str, 
+    delta=f"{total_days} total days together!"
+)
+st.markdown("---")
+# --- END COUNTER ---
+
+# Floral Tree visual
 st.markdown('<div class="love-tree"><div class="tree">🌸🌳🌼</div></div>', unsafe_allow_html=True)
 
-# Messages (Using flower emojis)
+# Messages
 messages = [
     "i cant eat you i will get diabetes cuz youre too sweet for even a guju like me 🌼",
     "most percious pookie of all time 🌷",
@@ -154,7 +190,6 @@ messages = [
     "I love you more every single day 🌸",
     "You’re my baby may you glow everday 💐",
     " your beauty is so glorious by itself its just have its own dimansion to decode not even binary or matrixes can work in it (you called me drunk when i wrte this ) 💫",
-    # USER'S NEW MESSAGE ADDED HERE
     "YOURE THE MOST SWEETEST POOKIES MY KUCHUPUCHU RASMALI"
 ]
 
@@ -218,7 +253,7 @@ st.download_button(
 st.markdown('</div>', unsafe_allow_html=True)
 
 
-# If the love button was clicked, render a temporary floating heart/flower animation
+# If the love button was clicked, render a temporary floating flower animation
 trigger = st.session_state.love_clicks
 
 # HTML+JS for temporary floating animation on button click.
@@ -268,6 +303,9 @@ floating_hearts_html = f"""
 
 # Embed the HTML.
 components.html(floating_hearts_html, height=1)
+
+st.write('---')
+st.caption(f"Made by loving husband🌼 for you — {datetime.now().year}")
 
 st.write('---')
 st.caption(f"Made by loving husband🌼 for you — {datetime.now().year}")
