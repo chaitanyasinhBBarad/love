@@ -12,7 +12,7 @@ st.markdown("""
 /* --- Main Background (Original pink gradient) --- */
 html, body, [data-testid="stAppViewContainer"] > .main {
     /* Reverting to the original pink gradient */
-    background: linear-gradient(135deg, #ffd6e0, #fff0f5);
+    background: linear-gradient(135deg, #000000, #fff0f5);
     position: relative; 
     z-index: 0; 
     min-height: 100vh;
@@ -60,19 +60,19 @@ html, body, [data-testid="stAppViewContainer"] > .main {
 /* Staggering daisy animation delays (Increased number of daisies) */
 .daisy:nth-child(1) { animation-delay: 0s; left: 5%; font-size: 25px;}
 .daisy:nth-child(2) { animation-delay: 1.5s; left: 15%; font-size: 20px;}
-.daisy:nth-child(3) { animation-delay: 3s; left: 25%; font-size: 30px;}
-.daisy:nth-child(4) { animation-delay: 4.5s; left: 35%; font-size: 22px;}
-.daisy:nth-child(5) { animation-delay: 6s; left: 45%; font-size: 28px;}
-.daisy:nth-child(6) { animation-delay: 7.5s; left: 55%; font-size: 23px;}
-.daisy:nth-child(7) { animation-delay: 9s; left: 65%; font-size: 27px;}
-.daisy:nth-child(8) { animation-delay: 10.5s; left: 75%; font-size: 21px;}
-.daisy:nth-child(9) { animation-delay: 12s; left: 85%; font-size: 26px;}
-.daisy:nth-child(10) { animation-delay: 13.5s; left: 95%; font-size: 24px;}
-.daisy:nth-child(11) { animation-delay: 15s; left: 2%; font-size: 18px;}
-.daisy:nth-child(12) { animation-delay: 16.5s; left: 12%; font-size: 32px;}
-.daisy:nth-child(13) { animation-delay: 18s; left: 22%; font-size: 26px;}
-.daisy:nth-child(14) { animation-delay: 19.5s; left: 32%; font-size: 20px;}
-.daisy:nth-child(15) { animation-delay: 21s; left: 42%; font-size: 25px;}
+.daisy:nth-child(3) { animation-delay: 2s; left: 25%; font-size: 30px;}
+.daisy:nth-child(4) { animation-delay: 2.5s; left: 35%; font-size: 22px;}
+.daisy:nth-child(5) { animation-delay: 3s; left: 45%; font-size: 28px;}
+.daisy:nth-child(6) { animation-delay: 3.5s; left: 55%; font-size: 23px;}
+.daisy:nth-child(7) { animation-delay: 4s; left: 65%; font-size: 27px;}
+.daisy:nth-child(8) { animation-delay: 4.5s; left: 75%; font-size: 21px;}
+.daisy:nth-child(9) { animation-delay: 5s; left: 85%; font-size: 26px;}
+.daisy:nth-child(10) { animation-delay: 5.5s; left: 95%; font-size: 24px;}
+.daisy:nth-child(11) { animation-delay: 6s; left: 2%; font-size: 18px;}
+.daisy:nth-child(12) { animation-delay: 6.5s; left: 12%; font-size: 32px;}
+.daisy:nth-child(13) { animation-delay: 7s; left: 22%; font-size: 26px;}
+.daisy:nth-child(14) { animation-delay: 7.5s; left: 32%; font-size: 20px;}
+.daisy:nth-child(15) { animation-delay: 8s; left: 42%; font-size: 25px;}
 
 /* --- Other Styling --- */
 .title-text {
