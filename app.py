@@ -150,4 +150,110 @@ messages = [
 ]
 
 if "custom_msgs" not in st.session_state:
-    st.
+    st.session_state.custom_msgs = []
+
+if "love_clicks" not in st.session_state:
+    st.session_state.love_clicks = 0
+
+st.subheader("💌 Random Love Message")
+col1, col2 = st.columns([1,1])
+with col1:
+    if st.button("💞 Show me some love 💞"):
+        st.session_state.love_clicks += 1
+        msg_list = messages + st.session_state.custom_msgs
+        chosen = random.choice(msg_list)
+        st.success(chosen)
+
+with col2:
+    # interactive quick react button (a smaller heart button)
+    if st.button("💓 Send a heart"):
+        st.session_state.love_clicks += 1
+        st.info("Heart sent!")
+
+st.subheader("💬 Add Your Own Love Note")
+new_msg = st.text_input("Write something sweet...")
+if st.button("💌 Add Message") and new_msg:
+    st.session_state.custom_msgs.append(new_msg)
+    st.success("Added! Now it’s part of our love collection 💞")
+
+# Close the content-wrapper div
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+# --- ADMIN FEATURE: Download All Custom Messages (positioned outside content-wrapper) ---
+
+# Prepare the data for download
+download_data = "--- Love Note Collection ---\n"
+if st.session_state.custom_msgs:
+    for i, msg in enumerate(st.session_state.custom_msgs):
+        download_data += f"\nNote {i+1}:\n"
+        download_data += f"  Text: {msg}\n"
+else:
+    download_data += "\nNo custom messages yet."
+
+# Use st.markdown to open the fixed container
+st.markdown('<div class="fixed-download-container">', unsafe_allow_html=True)
+
+# FIX: Removed the unnecessary and conflicting 'with st.container():' wrapper.
+st.download_button(
+    label="Download All Notes 🤫",
+    data=download_data.encode('utf-8'),
+    file_name=f"LoveNotes_History_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+    mime="text/plain",
+    key="admin_download_key"
+)
+
+# Use st.markdown to close the fixed container
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+# If the love button was clicked, render a temporary floating hearts animation
+trigger = st.session_state.love_clicks
+
+# HTML+JS for floating hearts on button click.
+floating_hearts_html = f"""
+<div id="heart-container" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:100;"></div>
+<style>
+.float-heart{{ position:fixed; font-size:24px; pointer-events:none; user-select:none; transform:translateY(0); }}
+@keyframes floatUp{{
+    0% {{ transform: translateY(0) scale(1); opacity: 1; }}
+    100% {{ transform: translateY(-30vh) scale(1.6); opacity: 0; }}
+}}
+</style>
+<script>
+(function(){{
+    const container = document.getElementById('heart-container');
+    // clear previous hearts
+    container.innerHTML = '';
+    const colors = ['❤️','💖','💘','💕','💞'];
+    const count = 14; // number of hearts to spawn each click
+    for (let i=0;i<count;i++) {{
+        const el = document.createElement('div');
+        el.className = 'float-heart';
+        el.style.left = (10 + Math.random()*80) + 'vw';
+        el.style.top = (60 + Math.random()*30) + 'vh';
+        el.style.fontSize = (16 + Math.random()*30) + 'px';
+        el.style.opacity = 1;
+        el.style.transform = 'translateY(0)';
+        el.innerText = colors[Math.floor(Math.random()*colors.length)];
+        container.appendChild(el);
+        // stagger animations
+        (function(e, delay){{
+            setTimeout(function(){{
+                e.style.transition = 'transform 1400ms ease-out, opacity 1400ms ease-out';
+                e.style.transform = 'translateY(-40vh) translateX(' + (Math.random()*60-30) + 'px) scale(1.3)';
+                e.style.opacity = 0;
+                // remove after animation
+                setTimeout(function(){{ e.remove(); }}, 1500);
+            }}, delay);
+        }})(el, i*70);
+    }}
+}})();
+</script>
+"""
+
+# Embed the HTML.
+components.html(floating_hearts_html, height=1)
+
+st.write('---')
+st.caption(f"Made with ❤️ for you — {datetime.now().year}")
