@@ -38,21 +38,32 @@ st.markdown("""
         color: white;
         border-bottom-left-radius: 2rem;
         border-bottom-right-radius: 2rem;
-        box-shadow: 0 8px 20px rgba(255, 64, 129, 0.6); /* Enhanced shadow */
+        box-shadow: 0 10px 30px rgba(255, 64, 129, 0.7); /* Deeper shadow for header */
         padding-bottom: 2rem !important;
     }
     .header-bg h1 {
         font-family: var(--display-font);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.3); /* Stronger text shadow */
+        letter-spacing: 1.5px; /* Added spacing */
     }
 
-    /* 3. Streamlit Main Content Card */
+    /* 3. Streamlit Main Content Card Container */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 4rem;
         max-width: 800px;
         margin-left: auto;
         margin-right: auto;
+        z-index: 10; /* Ensure content is above animation */
+    }
+    
+    /* NEW: Wrapper for the main content area for a unified card effect */
+    .main-content-wrapper {
+        background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+        border-radius: 2rem; /* Large, soft corners */
+        padding: 3rem; /* More space */
+        /* Multi-layer shadow for deep, premium lift */
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05); 
     }
     
     /* Ensure Streamlit headings use the display font */
@@ -61,7 +72,7 @@ st.markdown("""
     }
     
     /* Ensure Streamlit subheaders (from st.subheader) are centered */
-    .st-emotion-cache-1wmy5r7 { /* Targeting the container that holds st.subheader text */
+    .st-emotion-cache-1wmy5r7 {
         text-align: center;
         width: 100%;
     }
@@ -70,18 +81,20 @@ st.markdown("""
     /* 4. Custom Button Styling (Premium Look) */
     .stButton>button {
         background-color: #ff80a0; 
+        background-image: linear-gradient(45deg, #ff80a0 0%, #ff4081 100%); /* Stronger gradient */
         color: white;
         font-weight: 600;
         border: none;
         border-radius: 0.75rem;
         padding: 0.75rem 1.5rem;
-        box-shadow: 0 6px 12px rgba(255, 64, 129, 0.4); /* Deeper shadow for premium */
+        /* Enhanced depth shadow */
+        box-shadow: 0 4px 6px rgba(255, 64, 129, 0.5), 0 1px 3px rgba(0, 0, 0, 0.1); 
         transition: all 0.2s ease-in-out;
     }
     .stButton>button:hover {
         background-color: #ff4081; 
-        box-shadow: 0 8px 16px rgba(255, 64, 129, 0.6);
-        transform: translateY(-3px); /* Deeper hover */
+        box-shadow: 0 8px 16px rgba(255, 64, 129, 0.8);
+        transform: translateY(-3px); 
     }
     
     /* 5. Daisy Animation */
@@ -109,22 +122,23 @@ st.markdown("""
         background-color: white;
         padding: 1.5rem;
         border-radius: 1.5rem;
-        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
-        text-align: center; /* *** ENSURES TEXT IS CENTERED *** */
+        /* Richer, softer shadow */
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+        text-align: center; 
         transition: transform 0.3s ease;
-        border: 3px solid #ffccd5;
+        border: none; /* Removed border, relying on shadow */
     }
     .flower-card:hover {
         transform: translateY(-8px) scale(1.03);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.25), 0 0 15px rgba(255, 64, 129, 0.7);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.25), 0 0 15px rgba(255, 64, 129, 0.7);
     }
     
     /* Styling for the bouquet image placeholder */
     .flower-image {
-        width: 100px;
-        height: 100px;
+        width: 120px; /* Increased size */
+        height: 120px; /* Increased size */
         object-fit: cover;
-        border-radius: 50%; /* Making the placeholder image round */
+        border-radius: 0.75rem; /* Squared with rounded corners (More elegant) */
         margin: 0 auto 0.75rem auto; 
         display: block;
         border: 4px solid #ffccd5;
@@ -132,9 +146,10 @@ st.markdown("""
 
     .flower-title {
         font-family: var(--display-font);
-        font-size: 1.5rem;
+        font-size: 1.6rem; /* Slightly larger */
         color: #e91e63;
         font-weight: bold;
+        letter-spacing: 1px; /* Added spacing */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -238,7 +253,10 @@ st.markdown(daisies_html, unsafe_allow_html=True)
 
 # 3c. Main Content Area (Styled as a card using a container)
 with st.container(border=False):
-    st.markdown("<div class='mt-10'></div>", unsafe_allow_html=True) # Spacer
+    # Start the main content wrapper for the premium card look
+    st.markdown("<div class='main-content-wrapper'>", unsafe_allow_html=True) 
+
+    st.markdown("<div class='mt-5'></div>", unsafe_allow_html=True) # Slightly smaller spacer now that we have padding
 
     st.subheader("Our Love Counter", divider="rainbow")
     
@@ -269,7 +287,7 @@ with st.container(border=False):
     
     # *** FINALIZED: Single Placeholder Image URL for all bouquets ***
     # You only need to replace this one URL to update all six cards.
-    single_bouquet_url = "https://placehold.co/100x100/ff99aa/520f26?text=Bouquet"
+    single_bouquet_url = "https://placehold.co/120x120/ff99aa/520f26?text=Bouquet"
     
     # Data for the bouquets now uses the single placeholder URL
     bouquets = [
@@ -348,5 +366,7 @@ with st.container(border=False):
         <div class="mt-10 pt-4 border-t border-pink-300 text-center text-sm text-pink-600">
             Made with all my love ❤️
         </div>
-        """, unsafe_allow_html=True
+        """
+        # Close the main content wrapper
+        + "</div>", unsafe_allow_html=True 
     )
