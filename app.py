@@ -9,7 +9,7 @@ import pandas as pd
 # Tailwind CSS and Google Fonts setup (UPDATED FONTS)
 st.markdown("""
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
 # Custom CSS for Background, Card, Daisy Effect, and Streamlit Overrides
@@ -18,7 +18,7 @@ st.markdown("""
     /* Custom Fonts for global use (UPDATED FONT NAMES) */
     :root {
         --primary-font: 'Roboto', sans-serif; /* For body text */
-        --display-font: 'Dancing Script', cursive; /* For titles and headings */
+        --display-font: 'Pacifico', cursive; /* Applied "My Sunshine Font" */
     }
     
     body {
@@ -219,28 +219,49 @@ with st.container(border=False):
 
     st.markdown("---")
     
-    # --- NEW PICTURES SECTION ---
-    st.subheader("🖼️ Our Photo Album", divider="rainbow")
-    st.markdown("<p class='text-center text-sm text-pink-700 mb-6'>Imagine these are our favorite memories! You can replace these with actual image links (e.g., Imgur, Dropbox) or uploaded images later.</p>", unsafe_allow_html=True)
+    # --- UPDATED PICTURES SECTION: BOUQUET OF MEMORIES ---
     
-    # Placeholder URLs for 3 pictures using a romantic color palette
+    # Placeholder URLs for 3 pictures
     # REPLACE THESE URLs with your actual image links
     img1_url = "https://placehold.co/300x400/ffb3c1/5c1a2e?text=First+Date"
     img2_url = "https://placehold.co/300x400/ffccd5/5c1a2e?text=Favorite+Trip"
     img3_url = "https://placehold.co/300x400/ff8fa3/5c1a2e?text=Your+Smile"
 
-    # Display images in columns
-    img_col1, img_col2, img_col3 = st.columns(3)
+    st.subheader("💐 Our Bouquet of Memories", divider="rainbow")
     
-    with img_col1:
-        st.image(img1_url, caption="The Beginning", use_column_width=True)
-    with img_col2:
-        st.image(img2_url, caption="Adventures", use_column_width=True)
-    with img_col3:
-        st.image(img3_url, caption="Pure Joy", use_column_width=True)
-
+    # Custom HTML for the overlapping photo bouquet effect
+    bouquet_html = f"""
+    <div class="flex justify-center my-8">
+        <div class="relative w-full max-w-lg h-96">
+            <!-- Image 1: Back/Left -->
+            <div class="absolute inset-0 w-64 h-80 rounded-xl overflow-hidden shadow-2xl transform -rotate-12 transition-transform duration-500 hover:scale-105 hover:rotate-15" style="left: 0; top: 20px; z-index: 10;">
+                <img src="{img1_url}" class="w-full h-full object-cover border-4 border-white" onerror="this.src='https://placehold.co/300x400/ffb3c1/5c1a2e?text=First+Date';" alt="First Date Memory">
+                <p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-30 text-white text-xs p-1 text-center font-bold">The Start</p>
+            </div>
+            
+            <!-- Image 2: Middle/Center (Most Prominent) -->
+            <div class="absolute inset-0 w-64 h-80 rounded-xl overflow-hidden shadow-2xl transform rotate-3 transition-transform duration-500 hover:scale-105 hover:rotate-6" style="left: 50%; top: 40px; transform: translateX(-50%) rotate(3deg); z-index: 20;">
+                <img src="{img2_url}" class="w-full h-full object-cover border-4 border-white" onerror="this.src='https://placehold.co/300x400/ffccd5/5c1a2e?text=Favorite+Trip';" alt="Favorite Trip Memory">
+                <p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-30 text-white text-xs p-1 text-center font-bold">Our Adventure</p>
+            </div>
+            
+            <!-- Image 3: Front/Right -->
+            <div class="absolute inset-0 w-64 h-80 rounded-xl overflow-hidden shadow-2xl transform rotate-12 transition-transform duration-500 hover:scale-105 hover:rotate-9" style="right: 0; top: 0; z-index: 15;">
+                <img src="{img3_url}" class="w-full h-full object-cover border-4 border-white" onerror="this.src='https://placehold.co/300x400/ff8fa3/5c1a2e?text=Your+Smile';" alt="Your Smile Memory">
+                <p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-30 text-white text-xs p-1 text-center font-bold">Pure Happiness</p>
+            </div>
+            
+            <!-- Decorative Ribbon at the bottom -->
+            <div class="absolute w-2/3 h-6 bg-pink-500 rounded-b-full shadow-lg" style="bottom: 0; left: 50%; transform: translateX(-50%) rotateX(5deg); z-index: 30;"></div>
+        </div>
+    </div>
+    """
+    st.markdown(bouquet_html, unsafe_allow_html=True)
+    
+    st.markdown("<p class='text-center text-sm text-pink-700 mb-6'>Replace the placeholder images (img1_url, etc.) with your own public image URLs to fill our bouquet!</p>", unsafe_allow_html=True)
+    
     st.markdown("---")
-    # --- END PICTURES SECTION ---
+    # --- END UPDATED PICTURES SECTION ---
     
     # Random Message Section
     st.subheader("A Sweet Message Box")
