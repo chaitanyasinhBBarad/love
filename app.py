@@ -4,9 +4,9 @@ import random
 import re
 import pandas as pd
 
-# --- 1. CONFIGURATION AND STYLING INJECTION (The "Escape Hatch") ---
+# --- 1. CONFIGURATION AND STYLING INJECTION ---
 
-# Tailwind CSS and Google Fonts setup (UPDATED FONTS)
+# Tailwind CSS and Google Fonts setup
 st.markdown("""
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@ st.markdown("""
     /* Custom Fonts for global use */
     :root {
         --primary-font: 'Roboto', sans-serif; /* For body text */
-        --display-font: 'Pacifico', cursive; /* Applied "My Sunshine Font" */
+        --display-font: 'Pacifico', cursive; /* "My Sunshine Font" */
     }
     
     body {
@@ -29,52 +29,51 @@ st.markdown("""
     .stApp {
         background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
         min-height: 100vh;
-        padding-top: 0 !important; /* Remove default padding for full-screen effect */
+        padding-top: 0 !important;
     }
 
-    /* 2. Custom Header Styles */
+    /* 2. Custom Header Styles (Premium Look) */
     .header-bg {
         background: linear-gradient(90deg, #ff80a0, #ff4081);
         color: white;
         border-bottom-left-radius: 2rem;
         border-bottom-right-radius: 2rem;
-        box-shadow: 0 8px 15px rgba(255, 64, 129, 0.4);
+        box-shadow: 0 8px 20px rgba(255, 64, 129, 0.6); /* Enhanced shadow */
         padding-bottom: 2rem !important;
     }
     .header-bg h1 {
         font-family: var(--display-font);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
 
     /* 3. Streamlit Main Content Card */
-    /* Target the main block container where Streamlit widgets live */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 4rem;
-        max-width: 800px; /* Optional: Constrain width for desktop readability */
+        max-width: 800px;
         margin-left: auto;
         margin-right: auto;
     }
     
     .stMarkdown h1, .stMarkdown h2 {
-        font-family: var(--display-font); /* Apply fancy font to Streamlit headings */
+        font-family: var(--display-font);
     }
 
-    /* 4. Custom Button Styling (Message Button) */
+    /* 4. Custom Button Styling (Premium Look) */
     .stButton>button {
-        background-color: #ff80a0; /* Soft Pink */
+        background-color: #ff80a0; 
         color: white;
         font-weight: 600;
         border: none;
         border-radius: 0.75rem;
         padding: 0.75rem 1.5rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 6px 12px rgba(255, 64, 129, 0.4); /* Deeper shadow for premium */
         transition: all 0.2s ease-in-out;
     }
     .stButton>button:hover {
-        background-color: #ff4081; /* Deeper Pink */
-        box-shadow: 0 6px 10px rgba(255, 64, 129, 0.5);
-        transform: translateY(-2px);
+        background-color: #ff4081; 
+        box-shadow: 0 8px 16px rgba(255, 64, 129, 0.6);
+        transform: translateY(-3px); /* Deeper hover */
     }
     
     /* 5. Daisy Animation */
@@ -93,34 +92,34 @@ st.markdown("""
         0% { transform: translateY(-10vh) rotate(0deg); opacity: 0.8; }
         100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
     }
-    /* Set animation duration for each daisy type for variety */
     .daisy-slow { animation-duration: 15s; }
     .daisy-medium { animation-duration: 12s; }
     .daisy-fast { animation-duration: 9s; }
 
-    /* NEW FLOWER GALLERY STYLING */
+    /* FLOWER GALLERY STYLING (Premium Look) */
     .flower-card {
         background-color: white;
-        padding: 1rem;
-        border-radius: 1rem;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 0 5px rgba(255, 100, 150, 0.15);
+        padding: 1.5rem; /* More padding */
+        border-radius: 1.5rem; /* More rounded */
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15); /* Richer shadow */
         text-align: center;
         transition: transform 0.3s ease;
-        border: 2px solid #ffccd5;
+        border: 3px solid #ffccd5; /* Thicker border */
     }
     .flower-card:hover {
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.2), 0 0 10px rgba(255, 64, 129, 0.5);
+        transform: translateY(-8px) scale(1.03);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.25), 0 0 15px rgba(255, 64, 129, 0.7);
     }
     .flower-emoji {
-        font-size: 4rem;
+        font-size: 4.5rem; /* Larger emoji */
         display: block;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.75rem;
     }
     .flower-title {
         font-family: var(--display-font);
-        font-size: 1.25rem;
-        color: #ff4081;
+        font-size: 1.5rem; /* Larger font */
+        color: #e91e63; /* Deeper Pink */
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -244,7 +243,7 @@ with st.container(border=False):
 
     st.markdown("---")
     
-    # --- NEW FLOWER BOUQUET GALLERY SECTION ---
+    # --- FLOWER BOUQUET GALLERY SECTION ---
     
     st.subheader("🌷 A Garden Just For You", divider="rainbow")
     
@@ -278,7 +277,7 @@ with st.container(border=False):
     st.markdown("<p class='text-center text-sm text-pink-700 mb-6'>Each flower represents a beautiful part of our journey together! Click the message box for a little extra love.</p>", unsafe_allow_html=True)
     
     st.markdown("---")
-    # --- END NEW BOUQUET GALLERY SECTION ---
+    # --- END BOUQUET GALLERY SECTION ---
     
     # Random Message Section
     st.subheader("A Sweet Message Box")
@@ -324,4 +323,3 @@ with st.container(border=False):
         </div>
         """, unsafe_allow_html=True
     )
-    
