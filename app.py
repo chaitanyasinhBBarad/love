@@ -15,7 +15,7 @@ st.markdown("""
 # Custom CSS for Background, Card, Daisy Effect, and Streamlit Overrides
 st.markdown("""
 <style>
-    /* Custom Fonts for global use (UPDATED FONT NAMES) */
+    /* Custom Fonts for global use */
     :root {
         --primary-font: 'Roboto', sans-serif; /* For body text */
         --display-font: 'Pacifico', cursive; /* Applied "My Sunshine Font" */
@@ -97,6 +97,31 @@ st.markdown("""
     .daisy-slow { animation-duration: 15s; }
     .daisy-medium { animation-duration: 12s; }
     .daisy-fast { animation-duration: 9s; }
+
+    /* NEW FLOWER GALLERY STYLING */
+    .flower-card {
+        background-color: white;
+        padding: 1rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 0 5px rgba(255, 100, 150, 0.15);
+        text-align: center;
+        transition: transform 0.3s ease;
+        border: 2px solid #ffccd5;
+    }
+    .flower-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.2), 0 0 10px rgba(255, 64, 129, 0.5);
+    }
+    .flower-emoji {
+        font-size: 4rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .flower-title {
+        font-family: var(--display-font);
+        font-size: 1.25rem;
+        color: #ff4081;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -219,49 +244,41 @@ with st.container(border=False):
 
     st.markdown("---")
     
-    # --- UPDATED PICTURES SECTION: BOUQUET OF MEMORIES ---
+    # --- NEW FLOWER BOUQUET GALLERY SECTION ---
     
-    # Placeholder URLs for 3 pictures
-    # REPLACE THESE URLs with your actual image links
-    img1_url = "https://placehold.co/300x400/ffb3c1/5c1a2e?text=First+Date"
-    img2_url = "https://placehold.co/300x400/ffccd5/5c1a2e?text=Favorite+Trip"
-    img3_url = "https://placehold.co/300x400/ff8fa3/5c1a2e?text=Your+Smile"
-
-    st.subheader("💐 Our Bouquet of Memories", divider="rainbow")
+    st.subheader("🌷 A Garden Just For You", divider="rainbow")
     
-    # Custom HTML for the overlapping photo bouquet effect
-    bouquet_html = f"""
-    <div class="flex justify-center my-8">
-        <div class="relative w-full max-w-lg h-96">
-            <!-- Image 1: Back/Left -->
-            <div class="absolute inset-0 w-64 h-80 rounded-xl overflow-hidden shadow-2xl transform -rotate-12 transition-transform duration-500 hover:scale-105 hover:rotate-15" style="left: 0; top: 20px; z-index: 10;">
-                <img src="{img1_url}" class="w-full h-full object-cover border-4 border-white" onerror="this.src='https://placehold.co/300x400/ffb3c1/5c1a2e?text=First+Date';" alt="First Date Memory">
-                <p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-30 text-white text-xs p-1 text-center font-bold">The Start</p>
-            </div>
-            
-            <!-- Image 2: Middle/Center (Most Prominent) -->
-            <div class="absolute inset-0 w-64 h-80 rounded-xl overflow-hidden shadow-2xl transform rotate-3 transition-transform duration-500 hover:scale-105 hover:rotate-6" style="left: 50%; top: 40px; transform: translateX(-50%) rotate(3deg); z-index: 20;">
-                <img src="{img2_url}" class="w-full h-full object-cover border-4 border-white" onerror="this.src='https://placehold.co/300x400/ffccd5/5c1a2e?text=Favorite+Trip';" alt="Favorite Trip Memory">
-                <p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-30 text-white text-xs p-1 text-center font-bold">Our Adventure</p>
-            </div>
-            
-            <!-- Image 3: Front/Right -->
-            <div class="absolute inset-0 w-64 h-80 rounded-xl overflow-hidden shadow-2xl transform rotate-12 transition-transform duration-500 hover:scale-105 hover:rotate-9" style="right: 0; top: 0; z-index: 15;">
-                <img src="{img3_url}" class="w-full h-full object-cover border-4 border-white" onerror="this.src='https://placehold.co/300x400/ff8fa3/5c1a2e?text=Your+Smile';" alt="Your Smile Memory">
-                <p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-30 text-white text-xs p-1 text-center font-bold">Pure Happiness</p>
-            </div>
-            
-            <!-- Decorative Ribbon at the bottom -->
-            <div class="absolute w-2/3 h-6 bg-pink-500 rounded-b-full shadow-lg" style="bottom: 0; left: 50%; transform: translateX(-50%) rotateX(5deg); z-index: 30;"></div>
-        </div>
-    </div>
+    # Data for the bouquets (Flower emoji, Name/Title)
+    bouquets = [
+        ("🌹", "Endless Love"),
+        ("💐", "Pure Joy"),
+        ("🌸", "Sweet Beginnings"),
+        ("🌻", "My Sunshine"),
+        ("🌼", "Innocence & Truth"),
+        ("🌷", "Perfect Match"),
+    ]
+    
+    # Custom HTML for the responsive flower grid
+    bouquet_html = """
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 my-8">
     """
+    
+    for emoji, title in bouquets:
+        bouquet_html += f"""
+        <div class="flower-card">
+            <span class="flower-emoji">{emoji}</span>
+            <p class="flower-title">{title}</p>
+        </div>
+        """
+
+    bouquet_html += "</div>"
+    
     st.markdown(bouquet_html, unsafe_allow_html=True)
     
-    st.markdown("<p class='text-center text-sm text-pink-700 mb-6'>Replace the placeholder images (img1_url, etc.) with your own public image URLs to fill our bouquet!</p>", unsafe_allow_html=True)
+    st.markdown("<p class='text-center text-sm text-pink-700 mb-6'>Each flower represents a beautiful part of our journey together! Click the message box for a little extra love.</p>", unsafe_allow_html=True)
     
     st.markdown("---")
-    # --- END UPDATED PICTURES SECTION ---
+    # --- END NEW BOUQUET GALLERY SECTION ---
     
     # Random Message Section
     st.subheader("A Sweet Message Box")
