@@ -110,11 +110,18 @@ st.markdown("""
         transform: translateY(-8px) scale(1.03);
         box-shadow: 0 20px 40px rgba(0,0,0,0.25), 0 0 15px rgba(255, 64, 129, 0.7);
     }
-    .flower-emoji {
-        font-size: 4.5rem; /* Larger emoji */
+    
+    /* NEW: Styling for the placeholder image */
+    .flower-image {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 50%; /* Making the placeholder image round */
+        margin: 0 auto 0.75rem auto; 
         display: block;
-        margin-bottom: 0.75rem;
+        border: 4px solid #ffccd5;
     }
+
     .flower-title {
         font-family: var(--display-font);
         font-size: 1.5rem; /* Larger font */
@@ -247,14 +254,14 @@ with st.container(border=False):
     
     st.subheader("🌷 A Garden Just For You", divider="rainbow")
     
-    # Data for the bouquets (Flower emoji, Name/Title)
+    # Data for the bouquets now includes image URLs
     bouquets = [
-        ("🌹", "Endless Love"),
-        ("💐", "Pure Joy"),
-        ("🌸", "Sweet Beginnings"),
-        ("🌻", "My Sunshine"),
-        ("🌼", "Innocence & Truth"),
-        ("🌷", "Perfect Match"),
+        ("https://placehold.co/100x100/ffb3c1/520f26?text=Rose", "Endless Love"),
+        ("https://placehold.co/100x100/c0f0c0/103e10?text=Bunch", "Pure Joy"),
+        ("https://placehold.co/100x100/ffd4e0/e91e63?text=Cherry", "Sweet Beginnings"),
+        ("https://placehold.co/100x100/fff3b0/a07800?text=Sun", "My Sunshine"),
+        ("https://placehold.co/100x100/ffffff/555555?text=Daisy", "Innocence & Truth"),
+        ("https://placehold.co/100x100/ffcccc/880000?text=Tulip", "Perfect Match"),
     ]
     
     # Custom HTML for the responsive flower grid
@@ -262,10 +269,11 @@ with st.container(border=False):
     <div class="grid grid-cols-2 md:grid-cols-3 gap-6 my-8">
     """
     
-    for emoji, title in bouquets:
+    # Updated loop to use <img> tag and the new flower-image class
+    for image_url, title in bouquets:
         bouquet_html += f"""
         <div class="flower-card">
-            <span class="flower-emoji">{emoji}</span>
+            <img class="flower-image" src="{image_url}" alt="{title} image placeholder">
             <p class="flower-title">{title}</p>
         </div>
         """
@@ -279,20 +287,22 @@ with st.container(border=False):
     st.markdown("---")
     # --- END BOUQUET GALLERY SECTION ---
     
-    # Random Message Section
-    st.subheader("A Sweet Message Box")
-    
-    MESSAGES = [
-        "My heart smiles when you're around. 😊",
-        "Every moment with you is my favorite memory. ✨",
-        "Thank you for being my constant, beautiful sunshine. ☀️",
-        "You are the best thing that ever happened to me. I love you! ❤️",
-        "Just a reminder: I'm madly in love with you, Drishya. 🌹"
-    ]
-    
-    if st.button("🌷 Click for a sweet message 🌷"):
-        message = random.choice(MESSAGES)
-        st.success(f"**A message for you:** {message}")
+    # --- MESSAGE BOX SECTION ---
+    with st.container():
+        st.subheader("A Sweet Message Box")
+        
+        MESSAGES = [
+            "My heart smiles when you're around. 😊",
+            "Every moment with you is my favorite memory. ✨",
+            "Thank you for being my constant, beautiful sunshine. ☀️",
+            "You are the best thing that ever happened to me. I love you! ❤️",
+            "Just a reminder: I'm madly in love with you, Drishya. 🌹"
+        ]
+        
+        if st.button("🌷 Click for a sweet message 🌷"):
+            message = random.choice(MESSAGES)
+            # Display the message prominently
+            st.success(f"**A message for you:** {message}")
 
     st.markdown("---")
 
@@ -323,3 +333,4 @@ with st.container(border=False):
         </div>
         """, unsafe_allow_html=True
     )
+        
