@@ -1,372 +1,567 @@
 import streamlit as st
-import datetime
 import random
+from datetime import datetime
+import streamlit.components.v1 as components
 import re
 import pandas as pd
+from collections import Counter
+import io # Added for file handling
 
-# --- 1. CONFIGURATION AND STYLING INJECTION ---
+# --- Python functions for chat analysis logic ---
 
-# Tailwind CSS and Google Fonts setup
-st.markdown("""
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-""", unsafe_allow_html=True)
+def parse_chat(chat_text):
+    """
+    Parses WhatsApp chat text into a structured list of messages.
+    Handles multi-line messages and identifies key omissions.
+    """
+    # Regex pattern to match a standard WhatsApp message line: [DD/MM/YY, HH:MM:SS AM/PM] Sender: Message
+    pattern = re.compile(r'^\[(\d{2}/\d{2}/\d{2}, \d{1,2}:\d{2}:\d{2} (?:AM|PM))\] (.+?): (.*)$')
+    messages = []
+    
+    # Clean up the text: remove the byte order mark and split lines
+    text = chat_text.strip().replace('\ufeff', '')
+    
+    current_message = None
 
-# Custom CSS for Background, Card, Daisy Effect, and Streamlit Overrides
+    # Using io.StringIO to treat the string as a file object for line-by-line reading
+    for line in io.StringIO(text):
+        line = line.strip()
+        if not line:
+            continue
+            
+        match = pattern.match(line)
+        
+        if match:
+            # Start of a new message
+            timestamp_str, sender, message_content = match.groups()
+            
+            # Skip the system message
+            if message_content.startswith('‎Messages and calls are end-to-end encrypted'):
+                continue 
+
+            current_message = {
+                'Timestamp': datetime.strptime(timestamp_str, '%d/%m/%y, %I:%M:%S %p'),
+                'Sender': sender.strip(),
+                'Message': message_content.strip()
+            }
+            messages.append(current_message)
+            
+        elif current_message:
+            # Continuation of a multi-line message
+            current_message['Message'] += ' ' + line
+
+    return pd.DataFrame(messages)
+
+
+def analyze_chat_data(df, user_1, user_2):
+    """Performs core analysis on the chat DataFrame."""
+    if df.empty:
+        return None
+
+    # --- Core Metrics ---
+    total_messages = len(df)
+    messages_1 = df[df['Sender'] == user_1]
+    messages_2 = df[df['Sender'] == user_2]
+    
+    # --- Identify Special Message Types (Media & Deleted) ---
+    
+    # Identify Deleted Messages
+    deleted_msgs_1 = messages_1['Message'].str.contains('This message was deleted', na=False, case=False).sum()
+    deleted_msgs_2 = messages_2['Message'].str.contains('This message was deleted', na=False, case=False).sum()
+
+    # Identify Media Messages (Media messages will typically say "omitted" or similar)
+    media_msgs_1 = messages_1['Message'].str.contains('omitted', na=False, case=False).sum()
+    media_msgs_2 = messages_2['Message'].str.contains('omitted', na=False, case=False).sum()
+
+    # --- Filter messages down to only TEXT content for word counting & pet name counting ---
+    # We use a combined filter to ensure accuracy.
+    text_filter = ~df['Message'].str.contains('omitted|deleted', na=False, case=False)
+    
+    messages_1_text_only = df[df['Sender'] == user_1][text_filter]
+    messages_2_text_only = df[df['Sender'] == user_2][text_filter]
+    
+    # Total text messages sent is the count of messages that are NOT media or deleted
+    text_messages_sent_1 = len(messages_1_text_only)
+    text_messages_sent_2 = len(messages_2_text_only)
+
+    # --- Word Counting and Cleaning ---
+    
+    # Custom stop words (English + common chat filler/emojis)
+    STOP_WORDS = set([
+        'a', 'an', 'the', 'is', 'am', 'are', 'was', 'were', 'and', 'but', 'or', 'to', 'of', 'in', 'on', 'it', 'i', 'you', 
+        'my', 'me', 'at', 'that', 'this', 'we', 'he', 'she', 'they', 'what', 'who', 'when', 'where', 'why', 'how', 'do', 
+        'did', 'will', 'have', 'had', 'for', 'just', 'too', 'nah', 'yk', 'cuz', 'af', 'your', 'with', 'even', 'one', 'be',
+        'omitted', 'sticker', 'image', 'video', 'audio', 'gif', 'media', 'messages', 'calls', 'are', 'endtoend', 'encrypted',
+        # Common emojis/tokens found in this specific chat
+        '😂😂😂', '😂', '😂😂', '😂😂😂😂', '🥹', '✨', '🤧', '🫠', '🤌', '🫡', '🤝', '💗', '🌸', '~', 'msg', 'deleted', 'this'
+    ])
+
+    def get_word_counts(messages_df):
+        text = ' '.join(messages_df['Message'].astype(str).str.lower())
+        # Clean text: remove punctuation but keep spaces for tokenization
+        text = re.sub(r'[^a-z0-9\s]', '', text) 
+        words = text.split()
+        
+        # Filter out stop words and single-letter tokens
+        filtered_words = [word for word in words if word not in STOP_WORDS and len(word) > 1]
+        # Total words is the count before stop word filtering
+        return Counter(filtered_words), len(words) 
+
+    # Get word counts for each user (using text-only filtered data)
+    counter_1, total_words_1 = get_word_counts(messages_1_text_only)
+    counter_2, total_words_2 = get_word_counts(messages_2_text_only)
+    
+    # Combine counters for total top words
+    total_counter = counter_1 + counter_2
+    
+    # --- Date & Time Metrics ---
+    start_date = df['Timestamp'].min().strftime('%d %B %Y')
+    end_date = df['Timestamp'].max().strftime('%d %B %Y')
+    
+    # Hourly Activity
+    hourly_activity = df.groupby(df['Timestamp'].dt.hour)['Message'].count().reset_index()
+    hourly_activity.columns = ['Hour', 'Message Count']
+    
+    # --- Pet Name Counts (Case-Insensitive) ---
+    def count_pet_name(df_messages, term):
+        # Count pet names in text-only messages to avoid counting in "Media omitted"
+        return df_messages['Message'].str.lower().str.contains(r'\b' + re.escape(term) + r'\b', na=False).sum()
+
+    pet_names = {
+        'baby': (count_pet_name(messages_1_text_only, 'baby'), count_pet_name(messages_2_text_only, 'baby')),
+        'love': (count_pet_name(messages_1_text_only, 'love'), count_pet_name(messages_2_text_only, 'love')),
+        'darling': (count_pet_name(messages_1_text_only, 'darling'), count_pet_name(messages_2_text_only, 'darling')),
+        'sweetheart': (count_pet_name(messages_1_text_only, 'sweetheart'), count_pet_name(messages_2_text_only, 'sweetheart')),
+        'dobi': (count_pet_name(messages_1_text_only, 'dobi'), count_pet_name(messages_2_text_only, 'dobi'))
+    }
+
+    # --- Final structured results ---
+    results = {
+        'total_messages': total_messages,
+        'start_date': start_date,
+        'end_date': end_date,
+        'users': {
+            user_1: {
+                'messages': len(messages_1), # Total entries
+                'words': total_words_1, # Word count from text-only entries
+                'text_sent': text_messages_sent_1,
+                'media': media_msgs_1,
+                'deleted': deleted_msgs_1
+            },
+            user_2: {
+                'messages': len(messages_2),
+                'words': total_words_2,
+                'text_sent': text_messages_sent_2,
+                'media': media_msgs_2,
+                'deleted': deleted_msgs_2
+            }
+        },
+        'top_words': total_counter.most_common(10),
+        'hourly_activity': hourly_activity,
+        'pet_names': pet_names
+    }
+    
+    return results
+
+# Set page icon to a daisy
+st.set_page_config(page_title="🌼", page_icon="🌼", layout="centered")
+
+# --- Python functions for app logic ---
+
+def calculate_duration_live(start_date_str):
+    """Calculates and formats the relationship duration from the start date to now."""
+    start_date = datetime.strptime(start_date_str, '%d/%m/%Y')
+    today = datetime.now()
+    delta = today - start_date
+
+    total_seconds = int(delta.total_seconds())
+    
+    # Approximate years/months based on seconds for a friendly display
+    years = total_seconds // (365 * 24 * 3600)
+    remaining_seconds = total_seconds % (365 * 24 * 3600)
+    
+    # Using 30 days as a standard for a month approximation
+    months = remaining_seconds // (30 * 24 * 3600)
+    remaining_seconds = remaining_seconds % (30 * 24 * 3600)
+    
+    days = remaining_seconds // (24 * 3600)
+    remaining_seconds = remaining_seconds % (24 * 3600)
+    
+    hours = remaining_seconds // 3600
+    
+    duration_str = f"{years} years, {months} months, {days} days, {hours} hours"
+    
+    return duration_str, delta.days
+
+# --- CSS for background, falling daisies, and general styling ---
 st.markdown("""
 <style>
-    /* Custom Fonts for global use */
-    :root {
-        --primary-font: 'Roboto', sans-serif; /* For body text */
-        --display-font: 'Pacifico', cursive; /* "My Sunshine Font" */
-    }
-    
-    body {
-        font-family: var(--primary-font);
-    }
-    
-    /* 1. Global Background (Pink Gradient) */
-    .stApp {
-        background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
-        min-height: 100vh;
-        padding-top: 0 !important;
-    }
+/* --- Main Background (Set to Pink Gradient) --- */
+html, body, [data-testid="stAppViewContainer"] > .main {
+    background: linear-gradient(135deg, #ffd6e0, #fff0f5);
+    position: relative; 
+    z-index: 0; 
+    min-height: 100vh;
+}
 
-    /* 2. Custom Header Styles (Premium Look) */
-    .header-bg {
-        background: linear-gradient(90deg, #ff80a0, #ff4081);
-        color: white;
-        border-bottom-left-radius: 2rem;
-        border-bottom-right-radius: 2rem;
-        box-shadow: 0 10px 30px rgba(255, 64, 129, 0.7); /* Deeper shadow for header */
-        padding-bottom: 2rem !important;
-    }
-    .header-bg h1 {
-        font-family: var(--display-font);
-        text-shadow: 3px 3px 6px rgba(0,0,0,0.3); /* Stronger text shadow */
-        letter-spacing: 1.5px; /* Added spacing */
-    }
+/* --- Content Wrapper for Readability --- */
+.content-wrapper {
+    position: relative;
+    z-index: 10; 
+    padding: 20px; 
+    /* Using a soft white/pink background for the content box */
+    background: rgba(255, 255, 255, 0.85); 
+    border-radius: 15px;
+    margin: 20px auto;
+    max-width: 800px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
 
-    /* 3. Streamlit Main Content Card Container */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 4rem;
-        max-width: 800px;
-        margin-left: auto;
-        margin-right: auto;
-        z-index: 10; /* Ensure content is above animation */
-    }
-    
-    /* NEW: Wrapper for the main content area for a unified card effect */
-    .main-content-wrapper {
-        background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
-        border-radius: 2rem; /* Large, soft corners */
-        padding: 3rem; /* More space */
-        /* Multi-layer shadow for deep, premium lift */
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05); 
-    }
-    
-    /* Ensure Streamlit headings use the display font */
-    .stMarkdown h1, .stMarkdown h2 {
-        font-family: var(--display-font);
-    }
-    
-    /* Ensure Streamlit subheaders (from st.subheader) are centered */
-    .st-emotion-cache-1wmy5r7 {
-        text-align: center;
-        width: 100%;
-    }
+/* --- Falling Daisy Animation --- */
+.daisy-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 5; 
+    opacity: 0.7; 
+}
+.daisy {
+    position: absolute;
+    color: #FFF; 
+    font-size: 20px;
+    opacity: 0; 
+    animation: daisyFall 20s linear infinite; 
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
+}
+@keyframes daisyFall {
+    0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.9; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+/* Staggering daisy animation delays (Retained from user's file) */
+.daisy:nth-child(1) { animation-delay: 0s; left: 5%; font-size: 25px;}
+.daisy:nth-child(2) { animation-delay: 1.5s; left: 15%; font-size: 20px;}
+.daisy:nth-child(3) { animation-delay: 2s; left: 25%; font-size: 30px;}
+.daisy:nth-child(4) { animation-delay: 2.5s; left: 35%; font-size: 22px;}
+.daisy:nth-child(5) { animation-delay: 3s; left: 45%; font-size: 28px;}
+.daisy:nth-child(6) { animation-delay: 3.5s; left: 55%; font-size: 23px;}
+.daisy:nth-child(7) { animation-delay: 4s; left: 65%; font-size: 27px;}
+.daisy:nth-child(8) { animation-delay: 4.5s; left: 75%; font-size: 21px;}
+.daisy:nth-child(9) { animation-delay: 5s; left: 85%; font-size: 26px;}
+.daisy:nth-child(10) { animation-delay: 5.5s; left: 95%; font-size: 24px;}
+.daisy:nth-child(11) { animation-delay: 6s; left: 2%; font-size: 18px;}
+.daisy:nth-child(12) { animation-delay: 6.5s; left: 12%; font-size: 32px;}
+.daisy:nth-child(13) { animation-delay: 7s; left: 22%; font-size: 26px;}
+.daisy:nth-child(14) { animation-delay: 7.5s; left: 32%; font-size: 20px;}
+.daisy:nth-child(15) { animation-delay: 8s; left: 42%; font-size: 25px;}
 
+/* --- Other Styling --- */
+.title-text {
+    color: #5e0035;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    text-align: center;
+}
+.subtitle-text {
+    text-align: center;
+    color: #7a0b3b;
+    margin-top: -10px;
+    margin-bottom: 20px;
+}
+/* Floral tree visual */
+.love-tree { text-align: center; margin-top: 10px; margin-bottom: 10px; z-index: 1; }
+.tree { font-size: 72px; animation: sway 3s ease-in-out infinite; }
+@keyframes sway {
+    0%, 100% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
+}
 
-    /* 4. Custom Button Styling (Premium Look) */
-    .stButton>button {
-        background-color: #ff80a0; 
-        background-image: linear-gradient(45deg, #ff80a0 0%, #ff4081 100%); /* Stronger gradient */
-        color: white;
-        font-weight: 600;
-        border: none;
-        border-radius: 0.75rem;
-        padding: 0.75rem 1.5rem;
-        /* Enhanced depth shadow */
-        box-shadow: 0 4px 6px rgba(255, 64, 129, 0.5), 0 1px 3px rgba(0, 0, 0, 0.1); 
-        transition: all 0.2s ease-in-out;
-    }
-    .stButton>button:hover {
-        background-color: #ff4081; 
-        box-shadow: 0 8px 16px rgba(255, 64, 129, 0.8);
-        transform: translateY(-3px); 
-    }
-    
-    /* 5. Daisy Animation */
-    .daisy {
-        position: absolute;
-        width: 20px;
-        height: 20px;
-        color: #fff;
-        font-size: 20px;
-        animation: fall linear infinite;
-        pointer-events: none;
-        z-index: 1000;
-        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
-    }
-    @keyframes fall {
-        0% { transform: translateY(-10vh) rotate(0deg); opacity: 0.8; }
-        100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-    }
-    .daisy-slow { animation-duration: 15s; }
-    .daisy-medium { animation-duration: 12s; }
-    .daisy-fast { animation-duration: 9s; }
+/* Custom button styling */
+.stButton>button {
+    background: linear-gradient(90deg,#ff7aa2,#ff4b6e);
+    color: white;
+    border-radius: 24px;
+    padding: 10px 28px;
+    font-size: 18px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
 
-    /* FLOWER GALLERY STYLING (Premium Look) */
-    .flower-card {
-        background-color: white;
-        padding: 1.5rem;
-        border-radius: 1.5rem;
-        /* Richer, softer shadow */
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
-        text-align: center; 
-        transition: transform 0.3s ease;
-        border: none; /* Removed border, relying on shadow */
-    }
-    .flower-card:hover {
-        transform: translateY(-8px) scale(1.03);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.25), 0 0 15px rgba(255, 64, 129, 0.7);
-    }
-    
-    /* Styling for the bouquet image placeholder */
-    .flower-image {
-        width: 120px; /* Increased size */
-        height: 120px; /* Increased size */
-        object-fit: cover;
-        border-radius: 0.75rem; /* Squared with rounded corners (More elegant) */
-        margin: 0 auto 0.75rem auto; 
-        display: block;
-        border: 4px solid #ffccd5;
-    }
+/* --- Fixed Position Container for Download Button --- */
+.fixed-download-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000; 
+    padding: 0; 
+}
 
-    .flower-title {
-        font-family: var(--display-font);
-        font-size: 1.6rem; /* Slightly larger */
-        color: #e91e63;
-        font-weight: bold;
-        letter-spacing: 1px; /* Added spacing */
-    }
+.fixed-download-container .stDownloadButton>button {
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+    padding: 8px 15px;
+    font-size: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. PYTHON UTILITY FUNCTIONS (Mock Data Analysis) ---
-
-def calculate_duration_live(start_date_str):
-    """Calculates the duration between a start date and today."""
-    start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d").date()
-    today = datetime.date.today()
-    duration = today - start_date
-    total_days = duration.days
-    
-    years = total_days // 365
-    remaining_days = total_days % 365
-    months = remaining_days // 30 # Approximation
-    days = remaining_days % 30
-    
-    duration_str = f"{years} years, {months} months, and {days} days"
-    return duration_str, total_days
-
-def parse_chat(uploaded_file):
-    """Mocks parsing a chat file and returns fake data for analysis."""
-    # In a real app, this would read the file line by line and structure it.
-    st.info("Parsing chat file... (This is a mock analysis for display)")
-    
-    # Mock data to simulate analysis results
-    chat_data = {
-        'total_messages': 52397,
-        'start_date': '2022-01-05',
-        'most_active_day': 'Saturday',
-        'most_used_word': 'love',
-        'top_emojis': ['❤️', '🥺', '😂'],
-        'top_sender': 'Drishya',
-        'top_sender_count': 32190
-    }
-    return chat_data
-
-def analyze_chat_data(chat_data):
-    """Mocks generating insights from the parsed data."""
-    if not chat_data:
-        return "No data to analyze."
-        
-    # Note: This start date is hardcoded for the mock calculation only
-    mock_app_start_date = datetime.date(2022, 1, 5) 
-    
-    # Ensure no division by zero if dates are too close
-    days_since_start = (datetime.date.today() - mock_app_start_date).days
-    messages_per_day = chat_data['total_messages'] / days_since_start if days_since_start > 0 else 0
-    
-    report = f"""
-    ### 💌 Our Chat Journey Report 
-    
-    **Total Messages Exchanged:** {chat_data['total_messages']:,} messages.
-    
-    **Duration:** Since {chat_data['start_date']}, we've exchanged messages for over **{int(messages_per_day)} messages per day** on average!
-    
-    **Busiest Day:** Our chats peak on **{chat_data['most_active_day']}**—looks like weekends are for us!
-    
-    **Top Word:** The word we use the most is **"{chat_data['most_used_word'].upper()}"** (of course!).
-    
-    **Our Favorite Emojis:** {', '.join(chat_data['top_emojis'])}.
-    
-    **Top Sender:** **{chat_data['top_sender']}** has sent the most messages ({chat_data['top_sender_count']:,}).
-    """
-    return report
-
-# --- 3. MAIN STREAMLIT APPLICATION ---
-
-# The start date for the relationship counter
-start_date_str = "2023-08-15"
-
-# 3a. Injecting the Custom Header HTML
-custom_header_html = f"""
-<div class="header-bg p-8 flex flex-col items-center text-center">
-    <div class="text-5xl mb-2">💖</div>
-    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight">
-        For Drishya - My Love!
-    </h1>
-    <p class="text-sm font-light opacity-80 mt-2">
-        A sweet little project to celebrate us.
-    </p>
+# --- Falling Daisies Animation (HTML) ---
+daisy_html = """
+<div class="daisy-container">
+    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
+    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
+    <div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div><div class="daisy">🌼</div>
 </div>
 """
-st.markdown(custom_header_html, unsafe_allow_html=True)
+st.markdown(daisy_html, unsafe_allow_html=True)
 
-# 3b. Injecting the Daisy Animation HTML (must be outside the header)
-daisies_html = """
-<div class="animation-container">
-    <div class="daisy daisy-slow" style="left: 10%; animation-delay: 0s;">🌼</div>
-    <div class="daisy daisy-medium" style="left: 30%; animation-delay: 3s;">🌸</div>
-    <div class="daisy daisy-fast" style="left: 50%; animation-delay: 1s;">🌷</div>
-    <div class="daisy daisy-slow" style="left: 70%; animation-delay: 5s;">🌺</div>
-    <div class="daisy daisy-medium" style="left: 90%; animation-delay: 2s;">🌹</div>
-    <div class="daisy daisy-fast" style="left: 20%; animation-delay: 4s;">💖</div>
-    <div class="daisy daisy-slow" style="left: 65%; animation-delay: 7s;">🌼</div>
-</div>
+
+# --- Main App Content wrapped in the content-wrapper div ---
+st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+
+# Updated Title with Daisies
+st.markdown('<h1 class="title-text">🌼 For Drishu 🌼</h1>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle-text">A little garden of love just for you 💐</div>', unsafe_allow_html=True)
+
+# --- RELATIONSHIP COUNTER ---
+start_date_str = "14/05/2020"
+duration_str, total_days = calculate_duration_live(start_date_str)
+
+st.metric(
+    label="Our journey since 14/05/2020", 
+    value=duration_str, 
+    delta=f"{total_days} total days together!"
+)
+st.markdown("---")
+# --- END COUNTER ---
+
+# Floral Tree visual
+st.markdown('<div class="love-tree"><div class="tree">🌸🌳🌼</div></div>', unsafe_allow_html=True)
+
+# Messages
+messages = [
+    "i cant eat you i will get diabetes cuz youre too sweet for even a guju like me 🌼",
+    "most percious pookie of all time 🌷",
+    "sorry to make you cry last month baby 😊",
+    "I love you more every single day 🌸",
+    "You’re my baby may you glow everday 💐",
+    " your beauty is so glorious by itself its just have its own dimansion to decode not even binary or matrixes can work in it (you called me drunk when i wrte this ) 💫",
+    "YOURE THE MOST SWEETEST POOKIES MY KUCHUPUCHU RASMALI"
+]
+
+if "custom_msgs" not in st.session_state:
+    st.session_state.custom_msgs = []
+
+if "love_clicks" not in st.session_state:
+    st.session_state.love_clicks = 0
+
+st.subheader("💌Love Message for MY KUCHUPUCHU RASMALI")
+col1, col2 = st.columns([1,1])
+with col1:
+    # Button label changed to floral theme
+    if st.button("🌷a message for you 🌷"):
+        st.session_state.love_clicks += 1
+        msg_list = messages + st.session_state.custom_msgs
+        chosen = random.choice(msg_list)
+        st.success(chosen)
+
+with col2:
+    # Button label changed to floral theme
+    if st.button("🌼 Send a daisy"):
+        st.session_state.love_clicks += 1
+        st.info("Daisy sent! 🌼")
+
+# --- CUSTOM MESSAGE INPUT (MODIFIED SECTION) ---
+st.subheader("💬 atheiest me belive in god when i had you ")
+# Added a key for better session management
+new_msg = st.text_input("here dobi", key="new_note_input") 
+if st.button("🌸 write what ever you want to baby") and new_msg: 
+    st.session_state.custom_msgs.append(new_msg)
+    st.success("Added! Now it’s a beautiful petal in our collection 🌸")
+    # New feature: Display the message immediately after saving
+    st.info(f"**Just saved:** *{new_msg}*")
+
+# New feature: Display all notes added in the current session
+if st.session_state.custom_msgs:
+    st.markdown("---")
+    st.markdown("#### Notes Written This Session:")
+    # Display the most recent notes first
+    for i, msg in enumerate(reversed(st.session_state.custom_msgs)):
+        st.text(f"🌸 {msg}")
+# --- END CUSTOM MESSAGE INPUT ---
+
+# --- WHATSAPP ANALYSIS SECTION (Updated to include logic) ---
+st.markdown("---")
+st.subheader("📊 Our WhatsApp Chat Analysis (The Story of Us)")
+st.caption("Upload your exported WhatsApp chat (.txt file) to see who says 'I love you' more! (Privacy Note: The file is only processed here and not saved.)")
+
+uploaded_file = st.file_uploader("Upload Chat File (.txt)", type=["txt"])
+
+if uploaded_file is not None:
+    # Read file content
+    bytes_data = uploaded_file.read()
+    chat_text = bytes_data.decode("utf-8")
+    
+    # Define the two user names found in the chat file for analysis (Update this if names change)
+    USER_1 = "Little Mouse 💗🌸"
+    USER_2 = "Chaitanya ~"
+
+    # Process and Analyze
+    with st.spinner("Analyzing our love language..."):
+        chat_df = parse_chat(chat_text)
+        if not chat_df.empty:
+            analysis_results = analyze_chat_data(chat_df, USER_1, USER_2)
+            
+            st.success(f"Analysis complete! Chat from {analysis_results['start_date']} to {analysis_results['end_date']}.")
+
+            # --- General Stats ---
+            colA, colB, colC = st.columns(3)
+            colA.metric("Total Messages", analysis_results['total_messages'])
+            colB.metric(f"Words by {USER_1.split()[0]}", analysis_results['users'][USER_1]['words'])
+            colC.metric(f"Words by {USER_2.split()[0]}", analysis_results['users'][USER_2]['words'])
+
+            # --- Message & Media Breakdown ---
+            st.markdown("### Message Volume Breakdown")
+            
+            msg_data = pd.DataFrame({
+                'Metric': ['Total Entries in Chat', 'Text Messages Sent', 'Media (Stickers/Files)', 'Message Deleted 🗑️'],
+                USER_1: [
+                    analysis_results['users'][USER_1]['messages'],
+                    analysis_results['users'][USER_1]['text_sent'], 
+                    analysis_results['users'][USER_1]['media'],
+                    analysis_results['users'][USER_1]['deleted']
+                ],
+                USER_2: [
+                    analysis_results['users'][USER_2]['messages'],
+                    analysis_results['users'][USER_2]['text_sent'],
+                    analysis_results['users'][USER_2]['media'],
+                    analysis_results['users'][USER_2]['deleted']
+                ]
+            }).set_index('Metric')
+            
+            st.table(msg_data)
+            
+            # --- Pet Name Battle ---
+            st.markdown("### The Pet Name Battle 💖")
+            
+            pet_name_data = []
+            for name, counts in analysis_results['pet_names'].items():
+                pet_name_data.append({
+                    'Pet Name': name.capitalize(),
+                    USER_1: counts[0],
+                    USER_2: counts[1]
+                })
+            
+            df_pet_names = pd.DataFrame(pet_name_data).set_index('Pet Name')
+            st.table(df_pet_names)
+            
+            # Highlight the winner of "baby"
+            winner = USER_1 if df_pet_names.loc['Baby', USER_1] > df_pet_names.loc['Baby', USER_2] else USER_2
+            st.info(f"The winner of the **'Baby'** award is: **{winner.split()[0]}!**")
+            
+            
+            # --- Detailed Breakdown (Expander) ---
+            with st.expander("More Detailed Insights"):
+                
+                st.markdown("#### Top 10 Most Used Words (Excluding stop words & emojis) 📜")
+                words_df = pd.DataFrame(analysis_results['top_words'], columns=['Word', 'Count'])
+                st.table(words_df)
+                st.caption("Find your unique love vocabulary! 😊")
+
+                st.markdown("#### Hourly Activity Chart 🕰️")
+                # Add a column for the 24-hour clock label (e.g., 0 for 12 AM, 13 for 1 PM)
+                analysis_results['hourly_activity']['Time (24h)'] = analysis_results['hourly_activity']['Hour'].astype(str) + ':00'
+                
+                st.bar_chart(analysis_results['hourly_activity'].set_index('Time (24h)'))
+                st.caption("Find out your peak hour of love! (0 is 12:00 AM, 23 is 11:00 PM)")
+
+        else:
+            st.error("Could not parse any messages from the uploaded file. Please ensure the chat was exported without media.")
+
+# --- END ANALYSIS SECTION ---
+
+# Close the content-wrapper div
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+# --- ADMIN FEATURE: Download All Custom Messages (Fixed position) ---
+
+# Prepare the data for download
+download_data = "--- Flower Love Note Collection ---\n"
+if st.session_state.custom_msgs:
+    for i, msg in enumerate(st.session_state.custom_msgs):
+        download_data += f"\nNote {i+1}:\n"
+        download_data += f"  Text: {msg}\n"
+else:
+    download_data += "\nNo custom messages yet."
+
+# Use st.markdown to open the fixed container
+st.markdown('<div class="fixed-download-container">', unsafe_allow_html=True)
+
+# Place the st.download_button inside the fixed div
+st.download_button(
+    label="Download All Notes ",
+    data=download_data.encode('utf-8'),
+    file_name=f"LoveNotes_History_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+    mime="text/plain",
+    key="admin_download_key"
+)
+
+# Use st.markdown to close the fixed container
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+# If the love button was clicked, render a temporary floating flower animation
+trigger = st.session_state.love_clicks
+
+# HTML+JS for temporary floating animation on button click.
+floating_hearts_html = f"""
+<div id="heart-container" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:100;"></div>
+<style>
+.float-heart{{ position:fixed; font-size:24px; pointer-events:none; user-select:none; transform:translateY(0); }}
+@keyframes floatUp{{
+    0% {{ transform: translateY(0) scale(1); opacity: 1; }}
+    100% {{ transform: translateY(-30vh) scale(1.6); opacity: 0; }}
+}}
+</style>
+<script>
+(function(){{
+    const trigger = {trigger};
+    if (!trigger) return;
+    const container = document.getElementById('heart-container');
+    container.innerHTML = '';
+    const colors = ['🌼','🌸','🌷','🌱','💐','💖']; 
+    const count = 14; 
+    for (let i=0;i<count;i++) {{
+        const el = document.createElement('div');
+        el.className = 'float-heart';
+        el.style.left = (10 + Math.random()*80) + 'vw';
+        el.style.top = (60 + Math.random()*30) + 'vh';
+        el.style.fontSize = (16 + Math.random()*30) + 'px';
+        el.style.opacity = 1;
+        el.style.transform = 'translateY(0)';
+        el.innerText = colors[Math.floor(Math.random()*colors.length)];
+        container.appendChild(el);
+        
+        (function(e, delay){{
+            setTimeout(function(){{
+                e.style.transition = 'transform 1400ms ease-out, opacity 1400ms ease-out';
+                e.style.transform = 'translateY(-40vh) translateX(' + (Math.random()*60-30) + 'px) scale(1.3)';
+                e.style.opacity = 0;
+                setTimeout(function(){{ e.remove(); }}, 1500);
+            }}, delay);
+        }})(el, i*70);
+    }}
+}})();
+</script>
 """
-st.markdown(daisies_html, unsafe_allow_html=True)
 
+# Embed the HTML.
+components.html(floating_hearts_html, height=1)
 
-# 3c. Main Content Area (Styled as a card using a container)
-with st.container(border=False):
-    # Start the main content wrapper for the premium card look
-    st.markdown("<div class='main-content-wrapper'>", unsafe_allow_html=True) 
-
-    st.markdown("<div class='mt-5'></div>", unsafe_allow_html=True) # Slightly smaller spacer now that we have padding
-
-    st.subheader("Our Love Counter", divider="rainbow")
-    
-    # Calculate and display the duration
-    duration_str, total_days = calculate_duration_live(start_date_str)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.metric(label="Together for", value=duration_str)
-        
-    with col2:
-        # Custom HTML to make the metric look like a colorful badge
-        st.markdown(
-            f"""
-            <div class="p-3 bg-pink-100 rounded-xl shadow-md text-center">
-                <p class="text-xs font-semibold text-pink-600 mb-1">Total Days</p>
-                <p class="text-3xl font-bold text-pink-900">{total_days}</p>
-            </div>
-            """, unsafe_allow_html=True
-        )
-
-    st.markdown("---")
-    
-    # --- FLOWER BOUQUET GALLERY SECTION ---
-    
-    st.subheader("🌷 A Garden Just For You", divider="rainbow")
-    
-    # *** FINALIZED: Single Placeholder Image URL for all bouquets ***
-    # You only need to replace this one URL to update all six cards.
-    single_bouquet_url = "https://placehold.co/120x120/ff99aa/520f26?text=Bouquet"
-    
-    # Data for the bouquets now uses the single placeholder URL
-    bouquets = [
-        (single_bouquet_url, "Endless Love"),
-        (single_bouquet_url, "Pure Joy"),
-        (single_bouquet_url, "Sweet Beginnings"),
-        (single_bouquet_url, "My Sunshine"),
-        (single_bouquet_url, "Innocence & Truth"),
-        (single_bouquet_url, "Perfect Match"),
-    ]
-    
-    # Custom HTML for the responsive flower grid
-    bouquet_html = """
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 my-8">
-    """
-    
-    # Loop to create the flower cards
-    for image_url, title in bouquets:
-        bouquet_html += f"""
-        <div class="flower-card">
-            <img class="flower-image" src="{image_url}" alt="{title} image placeholder">
-            <p class="flower-title">{title}</p>
-        </div>
-        """
-
-    bouquet_html += "</div>"
-    
-    st.markdown(bouquet_html, unsafe_allow_html=True)
-    
-    st.markdown("<p class='text-center text-sm text-pink-700 mb-6'>Each flower represents a beautiful part of our journey together! Click the message box for a little extra love.</p>", unsafe_allow_html=True)
-    
-    st.markdown("---")
-    # --- END BOUQUET GALLERY SECTION ---
-    
-    # --- MESSAGE BOX SECTION ---
-    with st.container():
-        st.subheader("A Sweet Message Box")
-        
-        MESSAGES = [
-            "My heart smiles when you're around. 😊",
-            "Every moment with you is my favorite memory. ✨",
-            "Thank you for being my constant, beautiful sunshine. ☀️",
-            "You are the best thing that ever happened to me. I love you! ❤️",
-            "Just a reminder: I'm madly in love with you, Drishya. 🌹"
-        ]
-        
-        if st.button("🌷 Click for a sweet message 🌷"):
-            message = random.choice(MESSAGES)
-            # Display the message prominently
-            st.success(f"**A message for you:** {message}")
-
-    st.markdown("---")
-
-    # File Uploader Section
-    st.subheader("Chat Data Analysis")
-    st.info("Upload your WhatsApp/Telegram chat export (text file) to see fun stats!")
-    
-    uploaded_file = st.file_uploader("Upload Chat Export (.txt file)", type=["txt", "csv"])
-    
-    if uploaded_file is not None:
-        try:
-            # Pass the uploaded file to the mock parser
-            with st.spinner('Analyzing your love history...'):
-                chat_data = parse_chat(uploaded_file)
-                report = analyze_chat_data(chat_data)
-                st.markdown(report)
-                
-            st.balloons()
-            
-        except Exception as e:
-            st.error(f"An error occurred during processing: {e}")
-
-    # Footer/Signature
-    st.markdown(
-        """
-        <div class="mt-10 pt-4 border-t border-pink-300 text-center text-sm text-pink-600">
-            Made with all my love ❤️
-        </div>
-        """
-        # Close the main content wrapper
-        + "</div>", unsafe_allow_html=True 
-    )
+st.write('---')
+st.caption(f"Made by loving husband🌼 for you — {datetime.now().year}") this is my current app.py that run on streamlit now explain me step by step for ui intogration
