@@ -6,19 +6,19 @@ import pandas as pd
 
 # --- 1. CONFIGURATION AND STYLING INJECTION (The "Escape Hatch") ---
 
-# Tailwind CSS and Google Fonts setup
+# Tailwind CSS and Google Fonts setup (UPDATED FONTS)
 st.markdown("""
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 """, unsafe_allow_html=True)
 
 # Custom CSS for Background, Card, Daisy Effect, and Streamlit Overrides
 st.markdown("""
 <style>
-    /* Custom Fonts for global use */
+    /* Custom Fonts for global use (UPDATED FONT NAMES) */
     :root {
-        --primary-font: 'Inter', sans-serif;
-        --display-font: 'Playfair Display', serif;
+        --primary-font: 'Roboto', sans-serif; /* For body text */
+        --display-font: 'Dancing Script', cursive; /* For titles and headings */
     }
     
     body {
@@ -57,7 +57,7 @@ st.markdown("""
     }
     
     .stMarkdown h1, .stMarkdown h2 {
-        font-family: var(--display-font);
+        font-family: var(--display-font); /* Apply fancy font to Streamlit headings */
     }
 
     /* 4. Custom Button Styling (Message Button) */
@@ -219,6 +219,29 @@ with st.container(border=False):
 
     st.markdown("---")
     
+    # --- NEW PICTURES SECTION ---
+    st.subheader("🖼️ Our Photo Album", divider="rainbow")
+    st.markdown("<p class='text-center text-sm text-pink-700 mb-6'>Imagine these are our favorite memories! You can replace these with actual image links (e.g., Imgur, Dropbox) or uploaded images later.</p>", unsafe_allow_html=True)
+    
+    # Placeholder URLs for 3 pictures using a romantic color palette
+    # REPLACE THESE URLs with your actual image links
+    img1_url = "https://placehold.co/300x400/ffb3c1/5c1a2e?text=First+Date"
+    img2_url = "https://placehold.co/300x400/ffccd5/5c1a2e?text=Favorite+Trip"
+    img3_url = "https://placehold.co/300x400/ff8fa3/5c1a2e?text=Your+Smile"
+
+    # Display images in columns
+    img_col1, img_col2, img_col3 = st.columns(3)
+    
+    with img_col1:
+        st.image(img1_url, caption="The Beginning", use_column_width=True)
+    with img_col2:
+        st.image(img2_url, caption="Adventures", use_column_width=True)
+    with img_col3:
+        st.image(img3_url, caption="Pure Joy", use_column_width=True)
+
+    st.markdown("---")
+    # --- END PICTURES SECTION ---
+    
     # Random Message Section
     st.subheader("A Sweet Message Box")
     
@@ -263,3 +286,4 @@ with st.container(border=False):
         </div>
         """, unsafe_allow_html=True
     )
+    
