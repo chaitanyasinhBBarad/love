@@ -55,9 +55,17 @@ st.markdown("""
         margin-right: auto;
     }
     
+    /* Ensure Streamlit headings use the display font */
     .stMarkdown h1, .stMarkdown h2 {
         font-family: var(--display-font);
     }
+    
+    /* Ensure Streamlit subheaders (from st.subheader) are centered */
+    .st-emotion-cache-1wmy5r7 { /* Targeting the container that holds st.subheader text */
+        text-align: center;
+        width: 100%;
+    }
+
 
     /* 4. Custom Button Styling (Premium Look) */
     .stButton>button {
@@ -99,19 +107,19 @@ st.markdown("""
     /* FLOWER GALLERY STYLING (Premium Look) */
     .flower-card {
         background-color: white;
-        padding: 1.5rem; /* More padding */
-        border-radius: 1.5rem; /* More rounded */
-        box-shadow: 0 15px 30px rgba(0,0,0,0.15); /* Richer shadow */
-        text-align: center;
+        padding: 1.5rem;
+        border-radius: 1.5rem;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        text-align: center; /* *** ENSURES TEXT IS CENTERED *** */
         transition: transform 0.3s ease;
-        border: 3px solid #ffccd5; /* Thicker border */
+        border: 3px solid #ffccd5;
     }
     .flower-card:hover {
         transform: translateY(-8px) scale(1.03);
         box-shadow: 0 20px 40px rgba(0,0,0,0.25), 0 0 15px rgba(255, 64, 129, 0.7);
     }
     
-    /* NEW: Styling for the placeholder image */
+    /* Styling for the bouquet image placeholder */
     .flower-image {
         width: 100px;
         height: 100px;
@@ -124,8 +132,8 @@ st.markdown("""
 
     .flower-title {
         font-family: var(--display-font);
-        font-size: 1.5rem; /* Larger font */
-        color: #e91e63; /* Deeper Pink */
+        font-size: 1.5rem;
+        color: #e91e63;
         font-weight: bold;
     }
 </style>
@@ -170,7 +178,12 @@ def analyze_chat_data(chat_data):
     if not chat_data:
         return "No data to analyze."
         
-    messages_per_day = chat_data['total_messages'] / (datetime.date.today() - datetime.date(2022, 1, 5)).days
+    # Note: This start date is hardcoded for the mock calculation only
+    mock_app_start_date = datetime.date(2022, 1, 5) 
+    
+    # Ensure no division by zero if dates are too close
+    days_since_start = (datetime.date.today() - mock_app_start_date).days
+    messages_per_day = chat_data['total_messages'] / days_since_start if days_since_start > 0 else 0
     
     report = f"""
     ### 💌 Our Chat Journey Report 
@@ -254,14 +267,18 @@ with st.container(border=False):
     
     st.subheader("🌷 A Garden Just For You", divider="rainbow")
     
-    # Data for the bouquets now includes image URLs
+    # *** FINALIZED: Single Placeholder Image URL for all bouquets ***
+    # You only need to replace this one URL to update all six cards.
+    single_bouquet_url = "https://placehold.co/100x100/ff99aa/520f26?text=Bouquet"
+    
+    # Data for the bouquets now uses the single placeholder URL
     bouquets = [
-        ("https://placehold.co/100x100/ffb3c1/520f26?text=Rose", "Endless Love"),
-        ("https://placehold.co/100x100/c0f0c0/103e10?text=Bunch", "Pure Joy"),
-        ("https://placehold.co/100x100/ffd4e0/e91e63?text=Cherry", "Sweet Beginnings"),
-        ("https://placehold.co/100x100/fff3b0/a07800?text=Sun", "My Sunshine"),
-        ("https://placehold.co/100x100/ffffff/555555?text=Daisy", "Innocence & Truth"),
-        ("https://placehold.co/100x100/ffcccc/880000?text=Tulip", "Perfect Match"),
+        (single_bouquet_url, "Endless Love"),
+        (single_bouquet_url, "Pure Joy"),
+        (single_bouquet_url, "Sweet Beginnings"),
+        (single_bouquet_url, "My Sunshine"),
+        (single_bouquet_url, "Innocence & Truth"),
+        (single_bouquet_url, "Perfect Match"),
     ]
     
     # Custom HTML for the responsive flower grid
@@ -269,7 +286,7 @@ with st.container(border=False):
     <div class="grid grid-cols-2 md:grid-cols-3 gap-6 my-8">
     """
     
-    # Updated loop to use <img> tag and the new flower-image class
+    # Loop to create the flower cards
     for image_url, title in bouquets:
         bouquet_html += f"""
         <div class="flower-card">
@@ -333,4 +350,3 @@ with st.container(border=False):
         </div>
         """, unsafe_allow_html=True
     )
-        
